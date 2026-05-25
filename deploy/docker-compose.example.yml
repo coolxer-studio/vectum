@@ -49,7 +49,7 @@ services:
 
   zookeeper:
     image: bitnami/zookeeper:3.8
-    container_name: zookeeper-signal
+    container_name: zookeeper
     ports:
       - "2181:2181"
     environment:
@@ -72,7 +72,7 @@ services:
 
   kafka:
     image: bitnami/kafka:3.2.0
-    container_name: kafka-signal
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
@@ -101,7 +101,7 @@ services:
 
   clickhouse:
     image: clickhouse/clickhouse-server:22.8.16
-    container_name: clickhouse-single
+    container_name: clickhouse
     environment:
       TZ: Asia/Shanghai
       CLICKHOUSE_DB: default
