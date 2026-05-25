@@ -30,7 +30,8 @@ public class VectorServiceImpl implements VectorService {
 
     private static final String TASK_ROOT_PATH_FORMAT = "%s/workspace";
     private static final String CMD_FORMAT = "%s/bin/vector";
-    private static final String CONFIG_FORMAT = "%s/%s/push.toml";
+    private static final String CONFIG_FORMAT = "%s/%s/push.%s";
+    private static final String CONFIG_FORMAT_TOML = "%s/%s/push.toml";
     private static final String PID_FORMAT = "%s/%s/pid";
     private static final String LUA_PATH_FORMAT = "%s/%s/lua";
     private static final String LOG_INFO_FORMAT = "%s/%s/info.log";
@@ -118,7 +119,8 @@ public class VectorServiceImpl implements VectorService {
                 }
             }
             
-            Path configFilePath = Path.of(String.format(CONFIG_FORMAT, taskRootPath, path));
+            String extension = detectFormat(configContext);
+            Path configFilePath = Path.of(String.format(CONFIG_FORMAT, taskRootPath, path, extension));
             Files.writeString(configFilePath, configContext, StandardOpenOption.CREATE);
             
         } catch (IOException e) {
@@ -126,6 +128,46 @@ public class VectorServiceImpl implements VectorService {
             return e.getMessage();
         }
         return null;
+    }
+    
+    private String detectFormat(String content) {
+        if (content == null || content.isEmpty()) {
+            return "yaml";
+        }
+        
+        String trimmed = content.trim();
+        
+        if (trimmed.startsWith("{")) {
+            return "json";
+        }
+        
+        if (trimmed.startsWith("---")) {
+            return "yaml";
+        }
+        
+        int colonCount = countOccurrences(trimmed, ':');
+        int equalsCount = countOccurrences(trimmed, '=');
+        int bracketCount = countOccurrences(trimmed, '[');
+        
+        if (equalsCount > colonCount) {
+            return "toml";
+        }
+        
+        if (colonCount > equalsCount && colonCount > bracketCount) {
+            return "yaml";
+        }
+        
+        return "yaml";
+    }
+    
+    private int countOccurrences(String str, char c) {
+        int count = 0;
+        for (int i = 0; i < str.length(); i++) {
+            if (str.charAt(i) == c) {
+                count++;
+            }
+        }
+        return count;
     }
 
     /**
@@ -154,8 +196,13 @@ public class VectorServiceImpl implements VectorService {
             return currentProcess.pid();
         }
 
-        ProcessBuilder processBuilder = new ProcessBuilder(cmdPath, "-c", 
-                String.format(CONFIG_FORMAT, taskRootPath, path));
+        String configPath = findConfigFile(path);
+        if (configPath == null) {
+            log.error("Config file not found for path: {}", path);
+            return 0;
+        }
+
+        ProcessBuilder processBuilder = new ProcessBuilder(cmdPath, "-c", configPath);
         
         try {
             Process process = processBuilder.start();
@@ -173,6 +220,17 @@ public class VectorServiceImpl implements VectorService {
             log.error("Failed to start process for path: {}", path, e);
         }
         return 0;
+    }
+    
+    private String findConfigFile(String path) {
+        String[] extensions = {"yaml", "json", "toml"};
+        for (String ext : extensions) {
+            String configPath = String.format(CONFIG_FORMAT, taskRootPath, path, ext);
+            if (Files.exists(Path.of(configPath))) {
+                return configPath;
+            }
+        }
+        return null;
     }
 
     /**

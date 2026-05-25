@@ -30,9 +30,9 @@
 </head>
 
 <body>
-	<div id="root" class="app-wrapper"></div>
-	<script src="sdk/sdk.js"></script>
-	<script type="text/javascript">
+<div id="root" class="app-wrapper"></div>
+<script src="sdk/sdk.js"></script>
+<script type="text/javascript">
 		(function () {
 			let amis = amisRequire('amis/embed');
 			// 通过替换下面这个配置来生成不同页面
@@ -46,12 +46,12 @@
 		"label": "创建数推服务",
 		"primary": true,
 		"dialog": {
-			"title": "创建数推服务",
+			"title": "创建数推任务",
 			"mode": "horizontal",
 			"size": "lg",
 			"body": {
 				"type": "form",
-				"api": "/x-genie/api/v1/system/push-task/add",
+				"api": "/vectum/api/v1/task/add",
 				"body": [{
 						"label": "数推服务名称",
 						"name": "name",
@@ -79,7 +79,8 @@
 	}],
 	"body": [{
 		"type": "crud",
-		"api": "/x-genie/api/v1/system/push-task/list",
+		"api": "/vectum/api/v1/task/all",
+		"loadDataOnce": true,
 		"autoGenerateFilter": true,
 		"columns": [{
 				"name": "id",
@@ -98,6 +99,7 @@
 				"name": "description",
 				"label": "描述",
 				"type": "text",
+				"searchable": true,
 				"toggled": true
 			},
 			{
@@ -144,11 +146,18 @@
 				"name": "pid",
 				"label": "进程id",
 				"type": "text",
+				"searchable": true,
 				"toggled": true
 			},
 			{
 				"name": "update_time",
 				"label": "更新时间",
+				"type": "text",
+				"toggled": true
+			},
+			{
+				"name": "create_time",
+				"label": "创建时间",
 				"type": "text",
 				"toggled": true
 			},
@@ -162,7 +171,7 @@
 						"hiddenOn": "status == 'stopped'",
 						"actionType": "ajax",
 						"confirmText": "您确认要停止?",
-						"api": "post:/x-genie/api/v1/system/push-task/$id/toggle"
+						"api": "post:/vectum/api/v1/task/$id/toggle"
 					},
 					{
 						"type": "button",
@@ -170,7 +179,7 @@
 						"hiddenOn": "status != 'stopped'",
 						"actionType": "ajax",
 						"confirmText": "您确认要启动?",
-						"api": "post:/x-genie/api/v1/system/push-task/$id/toggle"
+						"api": "post:/vectum/api/v1/task/$id/toggle"
 					},
 					{
 						"type": "button",
@@ -182,7 +191,7 @@
 							"body": {
 								"type": "form",
 								"name": "sample-edit-form",
-								"api": "/x-genie/api/v1/system/push-task/$id/update",
+								"api": "PUT:/vectum/api/v1/task/$id",
 								"body": [{
 										"label": "数推服务名称",
 										"name": "name",
@@ -226,7 +235,7 @@
 												"filter",
 												"restart"
 											],
-											"source": "/x-genie/api/v1/system/push-task/$id/log?log_type=console"
+											"source": "/vectum/api/v1/task/$id/log?log_type=console"
 										}]
 									},
 									{
@@ -238,7 +247,7 @@
 												"filter",
 												"restart"
 											],
-											"source": "/x-genie/api/v1/system/push-task/$id/log?log_type=system"
+											"source": "/vectum/api/v1/task/$id/log?log_type=system"
 										}]
 									}
 								]
@@ -250,7 +259,7 @@
 						"icon": "fa fa-times text-danger",
 						"actionType": "ajax",
 						"confirmText": "您确认要删除?",
-						"api": "delete:/x-genie/api/v1/system/push-task/$id"
+						"api": "delete:/vectum/api/v1/task/$id"
 					}
 				],
 				"toggled": true

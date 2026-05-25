@@ -59,6 +59,9 @@ public class Task {
         this.config = taskDto.getConfig();
         this.source = taskDto.getSource();
         this.updateTime = java.sql.Timestamp.valueOf(LocalDateTime.now());
+        if(createTime == null){
+            createTime =  this.updateTime;
+        }
     }
 
 }

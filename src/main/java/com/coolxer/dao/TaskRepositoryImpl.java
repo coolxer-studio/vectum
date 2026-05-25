@@ -10,9 +10,11 @@ import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * 任务数据访问实现类
@@ -79,7 +81,9 @@ public class TaskRepositoryImpl implements TaskRepository {
      */
     @Override
     public synchronized List<Task> findAll() {
-        return new ArrayList<>(data);
+        return data.stream()
+                .sorted(Comparator.comparing(Task::getUpdateTime, Comparator.nullsLast(Comparator.reverseOrder())))
+                .collect(Collectors.toList());
     }
 
     /**
