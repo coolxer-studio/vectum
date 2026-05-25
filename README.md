@@ -124,7 +124,7 @@ mvn spring-boot:run
 mvn clean package
 
 # 运行打包后的 Jar
-java -jar target/application.jar
+java -jar target/application.jar --spring.config.location=src/main/resources/application.properties
 ```
 
 #### Docker 启动
@@ -134,7 +134,7 @@ java -jar target/application.jar
 docker build -t vectum:latest .
 
 # 运行容器
-docker run -d -p 8080:11002 -v /path/to/vector:/vector vectum:latest
+docker run -d -p 11002:11002 vectum:latest
 ```
 
 ### 4. 服务访问
