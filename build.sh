@@ -2,7 +2,7 @@
 
 # Docker Hub 配置
 DOCKER_HUB_USERNAME="your_username"
-IMAGE_NAME="data-service"
+IMAGE_NAME="vectum"
 IMAGE_TAG="latest"
 FULL_IMAGE_NAME="${DOCKER_HUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
 

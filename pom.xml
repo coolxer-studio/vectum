@@ -8,11 +8,11 @@
 		<version>3.2.0</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.coolxer.data</groupId>
-	<artifactId>data-service</artifactId>
+	<groupId>com.coolxer</groupId>
+	<artifactId>vectum</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>data-service</name>
-	<description>web-service project for Spring Boot</description>
+	<name>vectum</name>
+	<description>vectum project</description>
 	<properties>
 		<java.version>17</java.version>
 		<proguard.version>7.2.1</proguard.version>

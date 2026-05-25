@@ -108,7 +108,7 @@ Vectum = **Vector 多实例编排 + 可视化运维 + API 化管理 + MCP 智能
 
 ```bash
 # 进入项目目录
-cd data-service
+cd vectum
 
 # 编译项目
 mvn clean compile
@@ -215,7 +215,7 @@ sinks:
 ## 七、项目结构
 
 ```
-data-service/
+vectum/
 ├── src/main/java/com/coolxer/
 │   ├── Application.java           # 启动类
 │   ├── controller/                # REST API 控制器
