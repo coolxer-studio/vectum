@@ -86,7 +86,7 @@ public class TaskVo implements Serializable {
         this.id = task.getId();
         this.name = task.getName();
         this.description = task.getDescription();
-        this.source = task.getSource();
+        this.source = task.getSource().name();
         this.config = task.getConfig();
         this.status = status;
         this.pid = task.getPid();

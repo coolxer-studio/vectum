@@ -2,21 +2,21 @@
 <html lang="zh">
 
 <head>
-	<meta charset="UTF-8" />
-	<title>Vectum</title>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-	<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-	<link rel="icon" href="favicon.ico" type="image/x-icon">
-	<link rel="stylesheet" href="sdk/sdk.css" />
-	<link rel="stylesheet" href="sdk/helper.css" />
-	<link rel="stylesheet" href="sdk/iconfont.css" />
+    <meta charset="UTF-8"/>
+    <title>Vectum</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="sdk/sdk.css"/>
+    <link rel="stylesheet" href="sdk/helper.css"/>
+    <link rel="stylesheet" href="sdk/iconfont.css"/>
 
-	<!-- 这是默认主题所需的，如果是其他主题则不需要 -->
-	<!-- 从 1.1.0 开始 sdk.css 将不支持 IE 11，如果要支持 IE11 请引用这个 css，并把前面那个删了 -->
-	<!-- <link rel="stylesheet" href="sdk-ie11.css" /> -->
-	<!-- 不过 amis 开发团队几乎没测试过 IE 11 下的效果，所以可能有细节功能用不了，如果发现请报 issue -->
-	<style>
+    <!-- 这是默认主题所需的，如果是其他主题则不需要 -->
+    <!-- 从 1.1.0 开始 sdk.css 将不支持 IE 11，如果要支持 IE11 请引用这个 css，并把前面那个删了 -->
+    <!-- <link rel="stylesheet" href="sdk-ie11.css" /> -->
+    <!-- 不过 amis 开发团队几乎没测试过 IE 11 下的效果，所以可能有细节功能用不了，如果发现请报 issue -->
+    <style>
 		html,
 		body,
 		.app-wrapper {
@@ -26,17 +26,18 @@
 			margin: 0;
 			padding: 0;
 		}
-	</style>
+
+    </style>
 </head>
 
 <body>
 <div id="root" class="app-wrapper"></div>
 <script src="sdk/sdk.js"></script>
 <script type="text/javascript">
-		(function () {
-			let amis = amisRequire('amis/embed');
-			// 通过替换下面这个配置来生成不同页面
-			let amisJSON = {
+(function () {
+	let amis = amisRequire('amis/embed');
+	// 通过替换下面这个配置来生成不同页面
+	let amisJSON = {
 	"type": "page",
 	"title": "数推服务管理",
 	"remark": null,
@@ -72,6 +73,11 @@
 						"language": "yaml",
 						"editorTheme": "vs-dark",
 						"required": true
+					},
+					{
+						"type": "hidden",
+						"name": "source",
+						"value": "WEB"
 					}
 				]
 			}
@@ -150,6 +156,13 @@
 				"toggled": true
 			},
 			{
+				"name": "source",
+				"label": "来源",
+				"type": "text",
+				"searchable": true,
+				"toggled": true
+			},
+			{
 				"name": "update_time",
 				"label": "更新时间",
 				"type": "text",
@@ -212,6 +225,11 @@
 										"language": "yaml",
 										"editorTheme": "vs-dark",
 										"required": true
+									},
+									{
+										"type": "hidden",
+										"name": "source",
+										"value": "WEB"
 									}
 								]
 							}
@@ -267,10 +285,11 @@
 		]
 	}]
 };
-			let amisScoped = amis.embed('#root', amisJSON);
-		})();
+	let amisScoped = amis.embed('#root', amisJSON);
+})();
 
-	</script>
+
+</script>
 </body>
 
 </html>

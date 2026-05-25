@@ -1,6 +1,6 @@
 package com.coolxer.service;
 
-import com.coolxer.model.Task;
+import com.coolxer.commons.enums.TaskSourceEnum;
 import com.coolxer.model.dto.TaskDto;
 import com.coolxer.model.vo.TaskVo;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -69,6 +69,7 @@ public class McpTaskTools {
         taskDto.setName(name);
         taskDto.setDescription(description);
         taskDto.setConfig(config);
+        taskDto.setSource(TaskSourceEnum.MCP.name());
 
         try {
             TaskVo task = taskService.create(taskDto);
@@ -100,7 +101,7 @@ public class McpTaskTools {
             if (config != null && !config.isEmpty()) {
                 taskDto.setConfig(config);
             }
-
+            taskDto.setSource(TaskSourceEnum.MCP.name());
             Boolean result = taskService.update(taskId, taskDto);
             if (result) {
                 return success("更新成功");

@@ -1,6 +1,6 @@
 package com.coolxer.model;
 
-import com.coolxer.model.LuaFile;
+import com.coolxer.commons.enums.TaskSourceEnum;
 import com.coolxer.model.dto.TaskDto;
 import lombok.Data;
 
@@ -41,9 +41,9 @@ public class Task {
     private ArrayList<LuaFile> luaFiles;
 
     /**
-     * 任务来源（插件来源标识为插件包名，插件类型的任务不允许编辑）
+     * 任务来源
      */
-    private String source = "default";
+    private TaskSourceEnum source = TaskSourceEnum.SYSTEM;
 
     private Date createTime;
 
@@ -57,7 +57,11 @@ public class Task {
         this.name = taskDto.getName();
         this.description = taskDto.getDescription();
         this.config = taskDto.getConfig();
-        this.source = taskDto.getSource();
+        if (taskDto.getSource() == null){
+            this.source = TaskSourceEnum.API;
+        }else{
+            this.source = TaskSourceEnum.fromString(taskDto.getSource());
+        }
         this.updateTime = java.sql.Timestamp.valueOf(LocalDateTime.now());
         if(createTime == null){
             createTime =  this.updateTime;
