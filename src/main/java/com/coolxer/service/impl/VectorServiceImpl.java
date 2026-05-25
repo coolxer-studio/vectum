@@ -193,7 +193,7 @@ public class VectorServiceImpl implements VectorService {
     public long startProcess(String path) {
         Process currentProcess = PROCESS_CACHE.get(path);
         if (currentProcess != null) {
-            return currentProcess.pid();
+            stopProcess(path);
         }
 
         String configPath = findConfigFile(path);
@@ -250,7 +250,6 @@ public class VectorServiceImpl implements VectorService {
             }
             return "running";
         } else {
-            PROCESS_CACHE.remove(path);
             return "error";
         }
     }
@@ -277,7 +276,7 @@ public class VectorServiceImpl implements VectorService {
      */
     @Override
     public boolean stopProcess(String path) {
-        Process process = PROCESS_CACHE.remove(path);
+        Process process = PROCESS_CACHE.get(path);
         if (process == null) {
             return false;
         }
@@ -291,13 +290,15 @@ public class VectorServiceImpl implements VectorService {
             }
             
             File pidFile = new File(String.format(PID_FORMAT, taskRootPath, path));
-            return !process.isAlive() && pidFile.delete();
-            
+            if(!process.isAlive() && pidFile.delete()){
+                PROCESS_CACHE.remove(path);
+                return true;
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             log.error("Interrupted while stopping process: {}", path, e);
-            return false;
         }
+        return false;
     }
 
     /**
