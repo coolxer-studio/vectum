@@ -171,7 +171,7 @@ public class TaskController {
      */
     @GetMapping("/{id}/log")
     @ApiOperation(value = "获取任务日志", notes = "根据任务ID和日志类型获取日志内容")
-    public ResponseWrap<String> getLog(
+    public String getLog(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id,
             @ApiParam(value = "日志类型", required = true, allowableValues = "console,system") @RequestParam("log_type") String logType) {
         log.debug("获取任务日志: id={}, logType={}", id, logType);
@@ -179,6 +179,6 @@ public class TaskController {
         if (logContent == null) {
             throw new ApiException(ResultCodeEnum.INNER_ERROR);
         }
-        return ResponseWrap.success(logContent);
+        return logContent;
     }
 }

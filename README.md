@@ -165,14 +165,49 @@ docker run -d -p 8080:11002 -v /path/to/vector:/vector vectum:latest
 
 ### Vector 配置说明
 
-每个任务的配置采用 Vector 标准 TOML 格式，示例：
+每个任务的配置支持 **YAML、TOML、JSON** 三种格式，系统会自动识别格式类型：
 
+**TOML 格式示例：**
 ```toml
 [sources]
 nginx = { type = "file", path = "/var/log/nginx/access.log" }
 
 [sinks]
 elasticsearch = { type = "elasticsearch", endpoints = ["http://es:9200"], index = "logs-%Y-%m-%d" }
+```
+
+**YAML 格式示例：**
+```yaml
+sources:
+  nginx:
+    type: "file"
+    path: "/var/log/nginx/access.log"
+
+sinks:
+  elasticsearch:
+    type: "elasticsearch"
+    endpoints:
+      - "http://es:9200"
+    index: "logs-%Y-%m-%d"
+```
+
+**JSON 格式示例：**
+```json
+{
+  "sources": {
+    "nginx": {
+      "type": "file",
+      "path": "/var/log/nginx/access.log"
+    }
+  },
+  "sinks": {
+    "elasticsearch": {
+      "type": "elasticsearch",
+      "endpoints": ["http://es:9200"],
+      "index": "logs-%Y-%m-%d"
+    }
+  }
+}
 ```
 
 ---

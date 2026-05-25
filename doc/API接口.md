@@ -397,11 +397,7 @@ curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
 
 **响应示例**:
 ```json
-{
-  "code": 0,
-  "message": "success",
-  "data": "2024-01-01 12:00:00 [INFO] 任务开始执行\n2024-01-01 12:00:01 [INFO] 任务执行完成"
-}
+"2024-01-01 12:00:00 [INFO] 任务开始执行\n2024-01-01 12:00:01 [INFO] 任务执行完成"
 ```
 
 **错误响应**(获取日志失败):
