@@ -73,7 +73,11 @@ public class MonitorServiceImpl implements MonitorService {
             }
             
         } catch (IOException e) {
-            log.error("Failed to monitor log for path: {}", path, e);
+            if (e.getMessage() != null && e.getMessage().contains("Stream closed")) {
+                log.debug("Log monitoring stream closed for path: {}", path);
+            } else {
+                log.error("Failed to monitor log for path: {}", path, e);
+            }
         }
     }
 
