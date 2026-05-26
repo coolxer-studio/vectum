@@ -2,14 +2,13 @@ package com.coolxer.controller;
 
 import com.coolxer.commons.enums.ResultCodeEnum;
 import com.coolxer.commons.exception.ApiException;
-import com.coolxer.model.Task;
 import com.coolxer.model.dto.TaskDto;
 import com.coolxer.model.vo.ResponseWrap;
 import com.coolxer.model.vo.TaskVo;
 import com.coolxer.service.TaskService;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.annotations.ApiParam;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +24,7 @@ import java.util.List;
  * 提供任务的增删改查、启停控制、日志查看等REST API接口
  * </p>
  */
-@Api(tags = "任务管理")
+@Tag(name = "任务管理")
 @Slf4j
 @Validated
 @RestController
@@ -45,7 +44,7 @@ public class TaskController {
      * @return 任务视图对象
      */
     @PostMapping("/add")
-    @ApiOperation(value = "创建任务", notes = "创建新的任务")
+    @Operation(summary = "创建任务", description = "创建新的任务")
     public ResponseWrap<TaskVo> add(@Valid @RequestBody TaskDto taskDto) {
         log.info("创建任务: {}", taskDto.getName());
         TaskVo taskvo = taskService.create(taskDto);
@@ -58,7 +57,7 @@ public class TaskController {
      * @return 删除结果
      */
     @DeleteMapping("/{id}")
-    @ApiOperation(value = "删除任务", notes = "根据ID删除单个任务")
+    @Operation(summary = "删除任务", description = "根据ID删除单个任务")
     public ResponseWrap<String> delete(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id) {
         log.info("删除任务: id={}", id);
@@ -72,7 +71,7 @@ public class TaskController {
      * @return 删除结果
      */
     @DeleteMapping("/batch")
-    @ApiOperation(value = "批量删除任务", notes = "批量删除多个任务")
+    @Operation(summary = "批量删除任务", description = "批量删除多个任务")
     public ResponseWrap<String> batchDelete(@NotEmpty(message = "任务ID列表不能为空") @RequestParam("ids") List<Long> ids) {
         log.info("批量删除任务: ids={}", ids);
         taskService.deleteByIds(ids);
@@ -86,7 +85,7 @@ public class TaskController {
      * @return 更新结果
      */
     @PutMapping("/{id}")
-    @ApiOperation(value = "更新任务", notes = "根据ID更新任务信息")
+    @Operation(summary = "更新任务", description = "根据ID更新任务信息")
     public ResponseWrap<String> update(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id,
             @Valid @RequestBody TaskDto taskDto) {
@@ -104,7 +103,7 @@ public class TaskController {
      * @return 更新结果
      */
     @PutMapping("/batch")
-    @ApiOperation(value = "批量更新任务", notes = "批量更新多个任务")
+    @Operation(summary = "批量更新任务", description = "批量更新多个任务")
     public ResponseWrap<String> batchUpdate(
             @NotEmpty(message = "任务ID列表不能为空") @RequestParam("ids") List<Long> ids,
             @RequestBody TaskDto taskDto) {
@@ -124,7 +123,7 @@ public class TaskController {
      * @return 任务列表
      */
     @GetMapping("/all")
-    @ApiOperation(value = "查询所有任务", notes = "获取所有任务列表")
+    @Operation(summary = "查询所有任务", description = "获取所有任务列表")
     public ResponseWrap<List<TaskVo>> listAll() {
         log.debug("查询所有任务列表");
         return ResponseWrap.success(taskService.findAll());
@@ -136,7 +135,7 @@ public class TaskController {
      * @return 任务详情
      */
     @GetMapping("/{id}/view")
-    @ApiOperation(value = "查询任务详情", notes = "根据ID查询任务详细信息")
+    @Operation(summary = "查询任务详情", description = "根据ID查询任务详细信息")
     public ResponseWrap<TaskVo> getById(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id) {
         log.debug("查询任务详情: id={}", id);
@@ -153,7 +152,7 @@ public class TaskController {
      * @return 操作结果
      */
     @PostMapping("/{id}/toggle")
-    @ApiOperation(value = "启动/停止任务", notes = "切换任务的运行状态")
+    @Operation(summary = "启动/停止任务", description = "切换任务的运行状态")
     public ResponseWrap<Void> toggle(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id) {
         log.info("切换任务状态: id={}", id);
@@ -170,10 +169,10 @@ public class TaskController {
      * @return 日志内容
      */
     @GetMapping("/{id}/log")
-    @ApiOperation(value = "获取任务日志", notes = "根据任务ID和日志类型获取日志内容")
+    @Operation(summary = "获取任务日志", description = "根据任务ID和日志类型获取日志内容")
     public String getLog(
             @NotNull(message = ID_NOT_NULL) @PathVariable("id") Long id,
-            @ApiParam(value = "日志类型", required = true, allowableValues = "console,system") @RequestParam("log_type") String logType) {
+            @Parameter(description = "日志类型", required = true) @RequestParam("log_type") String logType) {
         log.debug("获取任务日志: id={}, logType={}", id, logType);
         String logContent = taskService.log(id, logType);
         if (logContent == null) {
