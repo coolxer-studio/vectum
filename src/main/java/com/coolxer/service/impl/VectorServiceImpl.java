@@ -28,10 +28,8 @@ public class VectorServiceImpl implements VectorService {
 
     private static final ConcurrentHashMap<String, Process> PROCESS_CACHE = new ConcurrentHashMap<>();
 
-    private static final String TASK_ROOT_PATH_FORMAT = "%s/workspace";
     private static final String CMD_FORMAT = "%s/bin/vector";
     private static final String CONFIG_FORMAT = "%s/%s/push.%s";
-    private static final String CONFIG_FORMAT_TOML = "%s/%s/push.toml";
     private static final String PID_FORMAT = "%s/%s/pid";
     private static final String LUA_PATH_FORMAT = "%s/%s/lua";
     private static final String LOG_INFO_FORMAT = "%s/%s/info.log";
@@ -39,14 +37,15 @@ public class VectorServiceImpl implements VectorService {
 
     private final MonitorService monitorService;
     private final String vectorHomePath;
-    
-    private String taskRootPath;
+    private final String taskWorkspace;
     private String cmdPath;
 
     public VectorServiceImpl(MonitorService monitorService, 
-                            @Value("${vector.home}") String vectorHomePath) {
+                            @Value("${vector.home}") String vectorHomePath,
+                            @Value("${task.workspace:${vector.home}/workspace}") String taskWorkspace) {
         this.monitorService = monitorService;
         this.vectorHomePath = vectorHomePath;
+        this.taskWorkspace = taskWorkspace;
     }
 
     /**
@@ -58,16 +57,15 @@ public class VectorServiceImpl implements VectorService {
     @PostConstruct
     @Override
     public void init() {
-        taskRootPath = String.format(TASK_ROOT_PATH_FORMAT, vectorHomePath);
         cmdPath = String.format(CMD_FORMAT, vectorHomePath);
         
-        File rootPath = new File(taskRootPath);
+        File rootPath = new File(taskWorkspace);
         if (rootPath.exists()) {
             File[] taskDirList = rootPath.listFiles();
             if (taskDirList != null) {
                 for (File taskDir : taskDirList) {
                     String taskDirName = taskDir.getName();
-                    File pidFile = new File(String.format(PID_FORMAT, taskRootPath, taskDirName));
+                    File pidFile = new File(String.format(PID_FORMAT, taskWorkspace, taskDirName));
                     
                     if (pidFile.exists()) {
                         String pid = readFile(pidFile.getAbsolutePath());
@@ -85,9 +83,9 @@ public class VectorServiceImpl implements VectorService {
         } else {
             boolean created = rootPath.mkdirs();
             if (created) {
-                log.info("Created task root directory: {}", taskRootPath);
+                log.info("Created task root directory: {}", taskWorkspace);
             } else {
-                log.error("Failed to create task root directory: {}", taskRootPath);
+                log.error("Failed to create task root directory: {}", taskWorkspace);
             }
         }
     }
@@ -102,12 +100,12 @@ public class VectorServiceImpl implements VectorService {
     @Override
     public String createProcess(String path, String configContext, ArrayList<LuaFile> luaFiles) {
         try {
-            File taskPath = new File(taskRootPath + File.separator + path);
+            File taskPath = new File(taskWorkspace + File.separator + path);
             if (!taskPath.exists()) {
                 taskPath.mkdirs();
             }
             
-            File luaPath = new File(String.format(LUA_PATH_FORMAT, taskRootPath, path));
+            File luaPath = new File(String.format(LUA_PATH_FORMAT, taskWorkspace, path));
             if (!luaPath.exists()) {
                 luaPath.mkdirs();
             }
@@ -120,7 +118,7 @@ public class VectorServiceImpl implements VectorService {
             }
             
             String extension = detectFormat(configContext);
-            Path configFilePath = Path.of(String.format(CONFIG_FORMAT, taskRootPath, path, extension));
+            Path configFilePath = Path.of(String.format(CONFIG_FORMAT, taskWorkspace, path, extension));
             Files.writeString(configFilePath, configContext, StandardOpenOption.CREATE);
             
         } catch (IOException e) {
@@ -208,11 +206,11 @@ public class VectorServiceImpl implements VectorService {
             Process process = processBuilder.start();
             PROCESS_CACHE.put(path, process);
             
-            Path pidPath = Path.of(String.format(PID_FORMAT, taskRootPath, path));
+            Path pidPath = Path.of(String.format(PID_FORMAT, taskWorkspace, path));
             Files.writeString(pidPath, String.valueOf(process.pid()), StandardOpenOption.CREATE);
             
-            monitorService.monitorLog(LOG_INFO_FORMAT, taskRootPath, path, process.getInputStream());
-            monitorService.monitorLog(LOG_ERROR_FORMAT, taskRootPath, path, process.getErrorStream());
+            monitorService.monitorLog(LOG_INFO_FORMAT, taskWorkspace, path, process.getInputStream());
+            monitorService.monitorLog(LOG_ERROR_FORMAT, taskWorkspace, path, process.getErrorStream());
             
             return process.pid();
             
@@ -225,7 +223,7 @@ public class VectorServiceImpl implements VectorService {
     private String findConfigFile(String path) {
         String[] extensions = {"yaml", "json", "toml"};
         for (String ext : extensions) {
-            String configPath = String.format(CONFIG_FORMAT, taskRootPath, path, ext);
+            String configPath = String.format(CONFIG_FORMAT, taskWorkspace, path, ext);
             if (Files.exists(Path.of(configPath))) {
                 return configPath;
             }
@@ -262,7 +260,7 @@ public class VectorServiceImpl implements VectorService {
     @Override
     public boolean deleteProcess(String path) {
         stopProcess(path);
-        File taskDir = new File(taskRootPath + File.separator + path);
+        File taskDir = new File(taskWorkspace + File.separator + path);
         if (!taskDir.exists()) {
             return true;
         }
@@ -289,7 +287,7 @@ public class VectorServiceImpl implements VectorService {
                 process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
             }
             
-            File pidFile = new File(String.format(PID_FORMAT, taskRootPath, path));
+            File pidFile = new File(String.format(PID_FORMAT, taskWorkspace, path));
             if(!process.isAlive() && pidFile.delete()){
                 PROCESS_CACHE.remove(path);
                 return true;
@@ -308,7 +306,7 @@ public class VectorServiceImpl implements VectorService {
      */
     @Override
     public String infoLog(String path) {
-        return readFile(String.format(LOG_INFO_FORMAT, taskRootPath, path));
+        return readFile(String.format(LOG_INFO_FORMAT, taskWorkspace, path));
     }
 
     /**
@@ -318,7 +316,7 @@ public class VectorServiceImpl implements VectorService {
      */
     @Override
     public String errorLog(String path) {
-        return readFile(String.format(LOG_ERROR_FORMAT, taskRootPath, path));
+        return readFile(String.format(LOG_ERROR_FORMAT, taskWorkspace, path));
     }
 
     /**

@@ -1,6 +1,7 @@
 .DS_Store 
 HELP.md
 vector
+workspace
 target/
 logs/
 !.mvn/wrapper/maven-wrapper.jar
