@@ -6,6 +6,21 @@
 
 ---
 
+## 快速运行 Vectum 服务
+
+### docker 镜像运行
+
+```bash
+docker run -d --name vectum -p 11002:11002 crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest
+```
+
+### docker-compose 运行
+
+```bash
+cd vectum/deploy
+docker-compose up -d
+```
+
 ## 一、产品定位
 
 Vectum = **Vector 多实例编排 + 可视化运维 + API 化管理 + MCP 智能体**
@@ -93,14 +108,13 @@ Vectum = **Vector 多实例编排 + 可视化运维 + API 化管理 + MCP 智能
 | 语言 | Java | 17 |
 | 框架 | Spring Boot | 3.2.0 |
 | 数据管道 | Vector | 0.35+ |
-| API 文档 | Springfox Swagger | 3.0.0 |
-| 代码混淆 | ProGuard | 7.2.1 |
+| API 文档 | SpringDoc OpenAPI | 2.3.0 |
 
 ### 2. 环境要求
 
 - JDK 17+
 - Maven 3.8+
-- Vector 0.35+（已内置在 `vector/` 目录）
+- Vector 0.35+（需提前安装）
 
 ### 3. 启动方式
 
@@ -120,14 +134,14 @@ mvn spring-boot:run
 #### 打包构建
 
 ```bash
-# 打包（包含代码混淆）
+# 打包
 mvn clean package
 
 # 运行打包后的 Jar
 java -jar target/application.jar --spring.config.location=src/main/resources/application.properties
 ```
 
-#### Docker 启动
+#### Docker 构建 启动
 
 ```bash
 # 构建镜像
@@ -142,8 +156,8 @@ docker run -d -p 11002:11002 vectum:latest
 | 服务 | 地址 |
 | :--- | :--- |
 | API 服务 | `http://<ip>:11002` |
-| Swagger 文档 | `http://<ip>:11002/swagger-ui.html` |
-| MCP 接口 | `http://<ip>:11002/mcp` |
+| Swagger 文档 | `http://<ip>:11002/swagger-ui/index.html` |
+| MCP 接口 | `http://<ip>:11002/sse` |
 
 ---
 
@@ -151,14 +165,13 @@ docker run -d -p 11002:11002 vectum:latest
 
 ### 配置文件
 
-`src/main/resources/application.properties`
-
 ### 主要配置项
 
 | 配置项 | 默认值 | 说明 |
 | :--- | :--- | :--- |
 | `server.port` | `11002` | 服务端口 |
 | `vector.home` | `/vector/` | Vector 安装目录 |
+| `task.workspace` | `/workspace/` | 任务工作空间目录 |
 | `task.file` | `/tasks.json` | 任务数据存储文件 |
 | `spring.task.execution.pool.core-size` | `10` | 异步线程池核心大小 |
 | `spring.task.execution.pool.max-size` | `20` | 异步线程池最大大小 |
@@ -217,45 +230,69 @@ sinks:
 ```
 vectum/
 ├── src/main/java/com/coolxer/
-│   ├── Application.java           # 启动类
-│   ├── controller/                # REST API 控制器
-│   │   └── TaskController.java    # 任务管理接口
-│   ├── service/                   # 业务服务层
-│   │   ├── TaskService.java       # 任务服务接口
-│   │   ├── VectorService.java     # Vector 进程管理接口
-│   │   ├── MonitorService.java    # 日志监控接口
-│   │   └── impl/                  # 服务实现类
-│   ├── model/                     # 数据模型
-│   │   ├── Task.java              # 任务实体
-│   │   ├── TaskDto.java           # 任务传输对象
-│   │   ├── TaskVo.java            # 任务视图对象
-│   │   └── LuaFile.java           # Lua 文件模型
-│   ├── dao/                       # 数据访问层
-│   │   ├── TaskRepository.java    # 任务数据访问
-│   │   └── TaskRepositoryImpl.java
-│   ├── config/                    # 配置类
-│   │   └── AsyncConfig.java       # 异步线程池配置
-│   ├── commons/                   # 公共组件
-│   │   ├── enums/                 # 枚举类
-│   │   └── exception/             # 异常处理
-│   ├── component/                 # Spring 组件
-│   │   └── StartRunnerComponent.java
-│   └── utils/                     # 工具类
-│       └── FileUtil.java
+│   ├── Application.java              # 启动类
+│   ├── controller/                   # REST API 控制器
+│   │   ├── IndexController.java      # 首页控制器
+│   │   └── TaskController.java       # 任务管理接口
+│   ├── service/                      # 业务服务层
+│   │   ├── TaskService.java          # 任务服务接口
+│   │   ├── VectorService.java        # Vector 进程管理接口
+│   │   ├── MonitorService.java       # 日志监控接口
+│   │   ├── McpTaskTools.java         # MCP 工具类
+│   │   └── impl/                     # 服务实现类
+│   ├── model/                        # 数据模型
+│   │   ├── dto/                      # 数据传输对象
+│   │   │   └── TaskDto.java          # 任务传输对象
+│   │   ├── vo/                       # 视图对象
+│   │   │   ├── ResponseWrap.java     # 统一响应包装
+│   │   │   └── TaskVo.java           # 任务视图对象
+│   │   ├── Task.java                 # 任务实体
+│   │   ├── PushTask.java             # 推送任务
+│   │   ├── LuaFile.java              # Lua 文件模型
+│   │   └── Result.java               # 结果模型
+│   ├── dao/                          # 数据访问层
+│   │   ├── TaskRepository.java       # 任务数据访问接口
+│   │   └── TaskRepositoryImpl.java   # 任务数据访问实现
+│   ├── config/                       # 配置类
+│   │   ├── AsyncConfig.java          # 异步线程池配置
+│   │   ├── JacksonConfig.java        # Jackson 配置
+│   │   ├── McpConfig.java            # MCP 协议配置
+│   │   └── OpenApiConfig.java        # OpenAPI 文档配置
+│   ├── commons/                      # 公共组件
+│   │   ├── enums/                    # 枚举类
+│   │   │   ├── ResultCodeEnum.java   # 结果码枚举
+│   │   │   └── TaskSourceEnum.java   # 任务来源枚举
+│   │   └── exception/                # 异常处理
+│   │       └── ApiException.java     # API 异常类
+│   ├── component/                    # Spring 组件
+│   │   └── StartRunnerComponent.java # 启动时执行组件
+│   └── utils/                        # 工具类
+│       └── FileUtil.java             # 文件工具类
 ├── src/main/resources/
-│   ├── application.properties     # 应用配置
-│   └── logback.xml                # 日志配置
-├── vector/                        # Vector 引擎目录
-│   ├── bin/vector                 # Vector 二进制文件
-│   └── config/                    # Vector 配置示例
-├── bin/                           # 编译输出目录
-├── doc/                           # 文档资源
-│   ├── architecture.png           # 架构图
-│   └── slogan.png                 # 图标
-├── pom.xml                        # Maven 依赖
-├── proguard.cfg                   # ProGuard 配置
-├── Dockerfile                     # Docker 配置
-└── README.md                      # 项目文档
+│   ├── static/                       # 静态资源
+│   │   ├── images/                   # 图片资源
+│   │   └── sdk/                      # SDK 静态文件
+│   ├── templates/                    # 模板文件
+│   │   └── index.html                # 首页模板
+│   ├── application.properties        # 应用配置
+│   ├── application-dev.properties    # 开发环境配置
+│   ├── application-prod.properties   # 生产环境配置
+│   └── logback.xml                   # 日志配置
+├── src/test/                         # 测试代码
+├── deploy/                           # 部署配置
+│   ├── config/                       # 配置文件
+│   ├── docker-compose.yml            # Docker Compose 配置
+│   └── docker-compose.example.yml    # Docker Compose 示例
+├── doc/                              # 文档资源
+│   ├── API接口.md                    # API 接口文档
+│   ├── architecture.png              # 架构图
+│   └── slogan.png                    # 图标
+├── pom.xml                           # Maven 依赖
+├── Dockerfile                        # Docker 配置
+├── build.sh                          # 构建脚本
+├── LICENSE                           # 许可证
+├── CONTRIBUTING.md                   # 贡献指南
+└── README.md                         # 项目文档
 ```
 
 ---
@@ -274,83 +311,20 @@ vectum/
 | PUT | `/{id}` | 更新任务 | `id`, `TaskDto` |
 | DELETE | `/{id}` | 删除任务 | `id` (路径参数) |
 | DELETE | `/batch` | 批量删除任务 | `ids` (逗号分隔) |
+| PUT | `/batch` | 批量更新任务 | `ids`, `TaskDto` |
 | GET | `/all` | 查询所有任务 | 无 |
 | GET | `/{id}/view` | 查询任务详情 | `id` (路径参数) |
 | POST | `/{id}/toggle` | 启动/停止任务 | `id` (路径参数) |
 | GET | `/{id}/log` | 获取任务日志 | `id`, `log_type` |
 
-### 请求示例
-
-**创建任务**
-
-```bash
-POST /vectum/api/v1/task/add
-Content-Type: application/json
-
-{
-  "name": "nginx-log",
-  "description": "采集 Nginx 访问日志",
-  "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }"
-}
-```
-
-**响应示例**
-
-```json
-{
-  "code": 0,
-  "message": "success",
-  "data": {
-    "id": 1,
-    "name": "nginx-log",
-    "description": "采集 Nginx 访问日志",
-    "status": "created",
-    "pid": 0
-  }
-}
-```
-
-**启动任务**
-
-```bash
-POST /vectum/api/v1/task/1/toggle
-```
-
-**获取日志**
-
-```bash
-GET /vectum/api/v1/task/1/log?log_type=console
-```
-
-### 响应格式
-
-| 字段 | 类型 | 说明 |
-| :--- | :--- | :--- |
-| `code` | int | 状态码 (0=成功, 其他=失败) |
-| `message` | string | 响应消息 |
-| `data` | object | 响应数据 |
+详细API接口说明参考 [API接口.md](doc/API接口.md)
 
 ---
 
-## 九、使用指南
+## 九、使用指南（WEB UI） 
 
 ### 创建数据采集任务
-
-1. 通过 API 或 Web UI 创建任务
-2. 提供任务名称和 Vector TOML 配置
-3. 系统自动创建工作空间并生成配置文件
-4. 调用启动接口启动任务
-
-### 监控任务状态
-
-- 通过 `/all` 接口查看所有任务状态
-- 通过 `/{id}/view` 查看单个任务详情
-- 通过 `/{id}/log` 获取任务运行日志
-
-### 停止/删除任务
-
-- `/{id}/toggle` 切换任务运行状态
-- `/{id}` DELETE 删除任务（会先停止进程）
+待更新补充截图
 
 ---
 

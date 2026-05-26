@@ -3,7 +3,7 @@
 **基础信息**
 - **模块名称**: 任务管理
 - **基础路径**: `/vectum/api/v1/task`
-- **作者**: hunter
+- **作者**: cipherzen 
 - **协议**: HTTP/HTTPS
 - **数据格式**: JSON
 
@@ -15,38 +15,65 @@
 
 ```json
 {
-  "id": 1,                    // Integer - 任务ID
-  "name": "任务名称",          // String - 任务名
-  "description": "任务描述",   // String - 描述信息
-  "config": "{}",             // String - 配置(JSON字符串)
-  "source": "system"          // String - 来源
+  "id": 1,                    // Integer - 任务ID（更新时使用，创建时不传）
+  "name": "任务名称",          // String - 任务名（必填）
+  "description": "任务描述",   // String - 描述信息（可选）
+  "config": "{}",             // String - 配置内容（必填，支持YAML/TOML/JSON格式）
+  "source": "system"          // String - 来源（可选，如：manual/system/api）
 }
 ```
+
+**字段说明**:
+| 字段 | 类型 | 必填 | 说明 |
+|-----|------|-----|------|
+| id | Long | 否 | 任务ID，更新时需传入 |
+| name | String | 是 | 任务名称，不能为空 |
+| description | String | 否 | 任务描述 |
+| config | String | 是 | Vector配置内容，支持YAML/TOML/JSON格式 |
+| source | String | 否 | 任务来源标识 |
 
 ### 2. TaskVo (任务视图对象)
 
 ```json
 {
-  "id": 1,
-  "name": "任务名称",
-  "description": "任务描述",
-  "config": "{}",
-  "source": "system",
-  "status": 1,                // String - 状态(created:创建 running:运行 running[error]:不健康状态运行 error:错误 stopped:停止)
-  "createTime": "2024-01-01 12:00:00",
-  "updateTime": "2024-01-01 12:00:00"
+  "id": 1,                         // Long - 任务ID
+  "name": "任务名称",               // String - 任务名
+  "description": "任务描述",        // String - 描述信息
+  "config": "{}",                  // String - 配置内容
+  "source": "system",              // String - 来源
+  "status": "created",             // String - 状态(created/running/running[error]/error/stopped)
+  "pid": 12345,                    // Integer - 进程ID（运行时为实际PID，停止时为0）
+  "createTime": "2024-01-01 12:00:00",  // String - 创建时间
+  "updateTime": "2024-01-01 12:00:00"   // String - 更新时间
 }
 ```
+
+**状态说明**:
+| 状态值 | 说明 |
+|-------|------|
+| created | 任务已创建，未启动 |
+| running | 任务正常运行中 |
+| running[error] | 任务运行中但存在错误 |
+| error | 任务错误，无法运行 |
+| stopped | 任务已停止 |
 
 ### 3. ResponseWrap (统一响应格式)
 
 ```json
 {
-  "code": 0,                // Integer - 响应码(0:成功)
-  "message": "success",       // String - 响应消息
+  "status": 0,                // Integer - 响应码(0:成功，其他:失败)
+  "msg": "success",           // String - 响应消息
   "data": {}                  // Object - 响应数据
 }
 ```
+
+**响应码说明**:
+| 响应码 | 说明 |
+|-------|------|
+| 0 | 请求成功 |
+| 404 | 任务不存在 |
+| 500 | 服务器内部错误/任务操作失败 |
+| 其他 | 业务错误码 |
 
 ---
 
@@ -83,28 +110,38 @@
 curl -X POST http://localhost:11002/vectum/api/v1/task/add \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "用户消息推送任务",
-    "description": "向用户推送重要消息通知",
-    "config": "{\"target\":\"user\",\"interval\":300}",
+    "name": "nginx-log-collector",
+    "description": "采集 Nginx 访问日志",
+    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  console = { type = \"console\" }",
     "source": "manual"
   }'
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": {
     "id": 1,
-    "name": "用户消息推送任务",
-    "description": "向用户推送重要消息通知",
-    "config": "{\"target\":\"user\",\"interval\":300}",
+    "name": "nginx-log-collector",
+    "description": "采集 Nginx 访问日志",
+    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  console = { type = \"console\" }",
     "source": "manual",
-    "status": 0,
+    "status": "created",
+    "pid": 0,
     "createTime": "2024-01-01 12:00:00",
     "updateTime": "2024-01-01 12:00:00"
   }
+}
+```
+
+**失败响应**(参数校验失败):
+```json
+{
+  "status": 400,
+  "msg": "任务名称不能为空",
+  "data": null
 }
 ```
 
@@ -114,7 +151,7 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/add \
 
 **接口地址**: `DELETE /vectum/api/v1/task/{id}`
 
-**功能描述**: 根据ID删除单个任务
+**功能描述**: 根据ID删除单个任务（会先停止进程再删除）
 
 **路径参数**:
 | 参数名 | 类型 | 必填 | 说明 |
@@ -126,12 +163,21 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/add \
 curl -X DELETE http://localhost:11002/vectum/api/v1/task/123
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": "删除成功"
+}
+```
+
+**失败响应**(任务不存在):
+```json
+{
+  "status": 404,
+  "msg": "任务不存在",
+  "data": null
 }
 ```
 
@@ -153,12 +199,21 @@ curl -X DELETE http://localhost:11002/vectum/api/v1/task/123
 curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3,4,5"
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": "批量删除成功"
+}
+```
+
+**失败响应**(ID列表为空):
+```json
+{
+  "status": 400,
+  "msg": "任务ID列表不能为空",
+  "data": null
 }
 ```
 
@@ -186,25 +241,24 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
   -d '{
     "name": "更新后的任务名称",
     "description": "更新后的描述",
-    "config": "{\"target\":\"user\",\"interval\":600}",
-    "source": "manual"
+    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  elasticsearch = { type = \"elasticsearch\", endpoints = [\"http://es:9200\"] }"
   }'
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": "修改成功"
 }
 ```
 
-**错误响应**(任务不存在):
+**失败响应**(任务不存在):
 ```json
 {
-  "code": 404,
-  "message": "任务不存在",
+  "status": 404,
+  "msg": "任务不存在",
   "data": null
 }
 ```
@@ -224,25 +278,27 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
 
 **请求参数**:
 - Content-Type: `application/json`
-- Body: TaskDto
+- Body: TaskDto（部分字段更新）
 
 **请求示例**:
 ```bash
 curl -X PUT "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3" \
   -H "Content-Type: application/json" \
   -d '{
-    "config": "{\"target\":\"all\",\"interval\":300}"
+    "description": "批量更新的描述信息"
   }'
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": "批量修改成功: 3/3"
 }
 ```
+
+**响应说明**: 返回格式为 `"批量修改成功: {成功数}/{总数}"`
 
 ---
 
@@ -259,29 +315,31 @@ curl -X PUT "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3" \
 curl -X GET http://localhost:11002/vectum/api/v1/task/all
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": [
     {
       "id": 1,
-      "name": "用户消息推送任务",
-      "description": "向用户推送重要消息通知",
-      "config": "{\"target\":\"user\",\"interval\":300}",
+      "name": "nginx-log-collector",
+      "description": "采集 Nginx 访问日志",
+      "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }",
       "source": "manual",
-      "status": 1,
+      "status": "running",
+      "pid": 12345,
       "createTime": "2024-01-01 12:00:00",
       "updateTime": "2024-01-01 12:00:00"
     },
     {
       "id": 2,
-      "name": "系统定时任务",
-      "description": "系统定时执行的任务",
-      "config": "{\"interval\":60}",
+      "name": "syslog-collector",
+      "description": "采集系统日志",
+      "config": "[sources]\n  syslog = { type = \"syslog\" }",
       "source": "system",
-      "status": 0,
+      "status": "stopped",
+      "pid": 0,
       "createTime": "2024-01-02 10:00:00",
       "updateTime": "2024-01-02 10:00:00"
     }
@@ -307,29 +365,30 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/all
 curl -X GET http://localhost:11002/vectum/api/v1/task/123/view
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": {
     "id": 123,
-    "name": "用户消息推送任务",
-    "description": "向用户推送重要消息通知",
-    "config": "{\"target\":\"user\",\"interval\":300}",
+    "name": "nginx-log-collector",
+    "description": "采集 Nginx 访问日志",
+    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }",
     "source": "manual",
-    "status": 1,
+    "status": "running",
+    "pid": 12345,
     "createTime": "2024-01-01 12:00:00",
     "updateTime": "2024-01-01 12:00:00"
   }
 }
 ```
 
-**错误响应**(任务不存在):
+**失败响应**(任务不存在):
 ```json
 {
-  "code": 404,
-  "message": "任务不存在",
+  "status": 404,
+  "msg": "任务不存在",
   "data": null
 }
 ```
@@ -354,20 +413,20 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/123/view
 curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
 ```
 
-**响应示例**:
+**成功响应**:
 ```json
 {
-  "code": 0,
-  "message": "success",
+  "status": 0,
+  "msg": "success",
   "data": null
 }
 ```
 
-**错误响应**(操作失败):
+**失败响应**(操作失败):
 ```json
 {
-  "code": 500,
-  "message": "任务操作失败",
+  "status": 500,
+  "msg": "任务操作失败",
   "data": null
 }
 ```
@@ -395,44 +454,56 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
 curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
 ```
 
-**响应示例**:
-```json
-"2024-01-01 12:00:00 [INFO] 任务开始执行\n2024-01-01 12:00:01 [INFO] 任务执行完成"
+**成功响应**:
+```text
+2024-01-01 12:00:00 [INFO] Vector v0.35.0 starting
+2024-01-01 12:00:01 [INFO] Configuration loaded from /tmp/vector-123/vector.toml
+2024-01-01 12:00:02 [INFO] Sources: nginx
+2024-01-01 12:00:03 [INFO] Sinks: console
+2024-01-01 12:00:04 [INFO] Vector has started successfully
 ```
 
-**错误响应**(获取日志失败):
+> **注意**: 日志接口返回的是纯文本格式，不是JSON格式
+
+**失败响应**(获取日志失败):
 ```json
 {
-  "code": 500,
-  "message": "内部错误",
+  "status": 500,
+  "msg": "内部错误",
   "data": null
 }
 ```
 
 ---
 
-## 📊 响应码说明
+## 📊 响应码汇总
 
-| 响应码 | 说明 |
-|--------|------|
-| 200 | 请求成功 |
-| 404 | 任务不存在 |
-| 500 | 服务器内部错误/任务操作失败 |
+| 响应码 | 说明 | 触发场景 |
+|--------|------|---------|
+| 0 | 请求成功 | 操作成功完成 |
+| -1 | 未知错误 | 遇到未定义的异常情况 |
+| 101 | 请求失败 | 请求处理失败 |
+| 102 | 任务名称不能为空 | 创建/更新任务时未提供任务名称 |
+| 103 | 任务配置不能为空 | 创建/更新任务时未提供任务配置 |
+| 104 | 任务不存在 | 任务ID不存在或已被删除 |
+| 105 | 任务操作失败 | 任务启停、删除等操作执行失败 |
+
 
 ---
 
 ## 🔐 注意事项
 
-1. **认证授权**: 所有接口都需要有效的身份认证token
-2. **权限控制**: 不同角色可能具有不同的操作权限
-3. **数据校验**: 
+1. **认证授权**: 当前版本暂未启用身份认证，所有接口均可直接访问
+2. **数据校验**: 
    - 任务名称不能为空
-   - 配置字段应为合法的JSON格式
-4. **批量操作**: 
+   - 配置字段不能为空
+   - 配置内容支持 YAML、TOML、JSON 三种格式
+3. **批量操作**: 
    - 批量删除/更新时，ID列表不能为空
    - 建议单次批量操作不超过100条记录
-5. **日志查询**: 日志类型参数值仅支持 `console` 和 `system`
-6. **任务启停**: toggle操作会立即生效，请谨慎操作
+4. **日志查询**: 日志类型参数值仅支持 `console` 和 `system`
+5. **任务启停**: toggle操作会立即生效，请谨慎操作
+6. **进程管理**: 删除任务时会自动停止对应的Vector进程
 
 ---
 
@@ -445,7 +516,7 @@ curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
 axios.post('/vectum/api/v1/task/add', {
   name: '测试任务',
   description: '这是一个测试任务',
-  config: '{"interval": 300}',
+  config: '[sources]\n  test = { type = "file", path = "/var/log/test.log" }',
   source: 'test'
 })
 
@@ -471,7 +542,7 @@ axios.get('/vectum/api/v1/task/123/log', {
 // 批量删除任务
 axios.delete('/vectum/api/v1/task/batch', {
   params: {
-    ids: [1, 2, 3]
+    ids: '1,2,3'
   }
 })
 ```
@@ -482,7 +553,7 @@ axios.delete('/vectum/api/v1/task/batch', {
 # 创建任务
 curl -X POST http://localhost:11002/vectum/api/v1/task/add \
   -H "Content-Type: application/json" \
-  -d '{"name":"测试任务","description":"测试","config":"{}","source":"test"}'
+  -d '{"name":"测试任务","description":"测试","config":"[sources]\n  test = { type = \"file\", path = \"/var/log/test.log\" }","source":"test"}'
 
 # 获取所有任务
 curl -X GET http://localhost:11002/vectum/api/v1/task/all
@@ -503,14 +574,3 @@ curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3"
 ```
 
 ---
-
-## 📝 版本历史
-
-| 版本 | 日期 | 说明 | 作者 |
-|------|------|------|------|
-| v1.0 | 2024-01-01 | 初始版本，包含9个核心接口 | hunter |
-
----
-
-**文档生成时间**: 2026-05-20  
-**最后更新时间**: 2026-05-20
