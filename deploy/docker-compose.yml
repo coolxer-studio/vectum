@@ -7,7 +7,7 @@ services:
     ports:
       - "11002:11002"
     volumes:
-      - ./config/vectum/application.properties:/app/application.properties:ro
+      - ./workspace:/workspace
     restart: unless-stopped
     environment:
       - TZ=Asia/Shanghai
