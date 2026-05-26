@@ -1,4 +1,4 @@
-FROM openjdk:17-jdk
+FROM crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/openjdk:17-jdk
 
 WORKDIR /app
 

@@ -28,7 +28,7 @@ services:
       start_period: 60s
 
   sftp:
-    image: atmoz/sftp:latest
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/atmoz-sftp:latest
     container_name: vectum-sftp
     ports:
       - "2222:22"
@@ -48,7 +48,7 @@ services:
       start_period: 10s
 
   zookeeper:
-    image: bitnami/zookeeper:3.8
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/bitnami-zookeeper:3.8
     container_name: zookeeper
     ports:
       - "2181:2181"
@@ -71,7 +71,7 @@ services:
       start_period: 10s
 
   kafka:
-    image: bitnami/kafka:3.2.0
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/bitnami-kafka:3.2.0
     container_name: kafka
     ports:
       - "9092:9092"
@@ -100,7 +100,7 @@ services:
       start_period: 30s
 
   clickhouse:
-    image: clickhouse/clickhouse-server:22.8.16
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/clickhouse:22.8.16
     container_name: clickhouse
     environment:
       TZ: Asia/Shanghai
