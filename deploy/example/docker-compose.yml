@@ -8,6 +8,7 @@ services:
       - "11002:11002"
     volumes:
       - ./workspace:/workspace
+      - sftp-data:/sftp-upload
     environment:
       TZ: Asia/Shanghai
     restart: unless-stopped
@@ -37,6 +38,7 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - sftp-data:/home/vectum/upload
+    command: bash -c "chown -R 1001:1001 /home/vectum/upload && /usr/sbin/sshd -D"
     restart: unless-stopped
     networks:
       - vectum-network
@@ -115,6 +117,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - clickhouse-logs:/var/log/clickhouse-server
       - clickhouse-data:/var/lib/clickhouse
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     restart: unless-stopped
     networks:
       - vectum-network

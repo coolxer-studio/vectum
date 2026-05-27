@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY target/application.jar ./application.jar
 COPY src/main/resources/application-prod.properties ./application.properties
-COPY vector ./vector
+COPY vector /vector
 
 EXPOSE 11002
 
