@@ -8,12 +8,6 @@
 
 ## 快速运行 Vectum 服务
 
-### docker 镜像运行
-
-```bash
-docker run -d --name vectum -p 11002:11002 crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest
-```
-
 ### docker-compose 运行
 
 ```bash
