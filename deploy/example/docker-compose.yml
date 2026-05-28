@@ -7,8 +7,9 @@ services:
     ports:
       - "11002:11002"
     volumes:
-      - ./workspace:/workspace
+      - workspace-data:/workspace
       - sftp-data:/sftp-upload
+      - vector-data:/var/lib/vector
     environment:
       TZ: Asia/Shanghai
     restart: unless-stopped
@@ -30,7 +31,7 @@ services:
 
   sftp:
     image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/atmoz-sftp:latest
-    container_name: vectum-sftp
+    container_name: sftp
     ports:
       - "2222:22"
     environment:
@@ -142,4 +143,8 @@ volumes:
   clickhouse-data:
     driver: local
   clickhouse-logs:
+    driver: local
+  vector-data:
+    driver: local
+  workspace-data:
     driver: local

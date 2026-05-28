@@ -1,6 +1,6 @@
 # Vectum 案例说明
 
-本文档描述基于Vectum实现的数据管道传输案例，实现从SFTP中获取数据到Kafka，再从Kafka中消费数据到ClickHouse的批量数据传输。
+本文档描述基于 Vectum 实现的数据管道传输案例，实现从 SFTP 获取数据 → Kafka 消息队列 → ClickHouse 数据存储的完整批量数据传输链路。
 
 ## 环境要求
 
@@ -17,69 +17,150 @@ docker-compose up -d
 
 ## 快速验证
 
-生成file.txt文件内容上传ftp文件
-```bash
-echo "张三|28|清华大学|信息工程专业\n李四|29|清华大学|信息工程专业\n王五|30|清华大学|信息工程专业" > file.txt
+### 1. 准备测试数据
 
+创建测试数据文件并上传到 SFTP 服务，用于测试数据管道功能：
+
+```bash
+# 创建测试数据文件（格式：姓名|年龄|学校|专业）
+echo "张三|28|清华大学|信息工程专业" > file.txt
+echo "李四|25|北京大学|计算机科学" >> file.txt
+echo "王五|23|复旦大学|软件工程" >> file.txt
+
+# 连接SFTP服务并上传文件
 sftp -o StrictHostKeyChecking=no -P 2222 vectum@localhost
 # 密码: vectum123
 
 sftp> cd upload
-sftp> put /path/to/local/file.txt
+sftp> put file.txt
+sftp> quit
+```
+**也可以使用 upload_test_data.sh 脚本快速上传测试数据**。
+
+```bash
+chmod +x upload_test_data.sh
+./upload_test_data.sh
 ```
 
-添加任务配置文件（vectot语法格式）
-```bash
-[sources.sftp_files]
-type = "file"
-include = ["/test/**"]
-read_from = "end"
-file_key = "file"
-line_delimiter = "\n"
-ignore_older = 86400
+### 2. 测试配置文件读取任务（SFTP → 控制台）
 
-[transforms.parse_csv]
-type = "remap"
-inputs = ["sftp_files"]
-drop_on_error = false
-source = '''
+#### 任务配置
 
-  parts = split!(.message, "|")
-  if length(parts) < 4 {
-    return null
-  }
+创建任务，添加配置如下，验证文件读取功能：
 
-.name = parts[0]
-.school = parts[2]
-.major = parts[3]
-.age = parts[1]
-'''
+```toml
+# -------------------------- 输入源：读取SFTP上传目录 --------------------------
+sources:
+  my_log_file:
+    type: file                 # 类型：文件读取
+    include:
+      - /sftp-upload/*         # 读取目录（支持通配符）
+    read_from: beginning       # 从文件开头读取（全量）
+    line_delimiter: "\n"       # 行分隔符
+    fingerprint:
+      strategy: device_and_inode
 
-[transforms.filter_valid]
-type = "filter"
-inputs = ["parse_csv"]
-condition = "exists(.name)"
-
-[sinks.console_test]
-type = "console"
-inputs = [ "sftp_files" ]
-
-[sinks.kafka_output]
-type = "kafka"
-inputs = ["filter_valid"]
-bootstrap_servers = "kafka:9092"
-topic = "vectum-logs"
-compression = "lz4"
-
-[sinks.console_test.encoding]
-codec = "json"
-
-[sinks.kafka_output.encoding]
-codec = "json"
-
+# -------------------------- 输出目标：控制台输出 --------------------------
+sinks:
+  console_output:
+    type: console              # 输出到控制台
+    inputs: [ my_log_file ]    # 来源：处理后的日志
+    encoding:
+      codec: json              # 输出格式：json / text
 ```
-将kafka中的数据写入clickhouse中
+
+#### 任务验证
+
+##### 1.参考测试数据发送到 SFTP 服务目录
+
+##### 2.通过接口查看控制台输出
 ```bash
+curl -X GET "http://localhost:11002/vectum/api/v1/task/【任务ID】/log?log_type=console"
+```
+##### 3.通过可视化界面查看控制台输出
+访问 http://localhost:11002，查看任务日志。
+
+
+
+### 3. 测试完整数据管道任务（SFTP → Kafka）
+
+#### 任务配置
+
+创建任务，添加配置如下，验证数据管道功能：
+
+```toml
+# 输入源：读取SFTP上传目录
+sources:
+  sftp_files:
+    type: file
+    include:
+      - /sftp-upload/*
+    read_from: beginning
+    line_delimiter: "\n"
+    fingerprint:
+      strategy: device_and_inode
+
+# 数据转换：解析CSV格式并过滤有效数据
+transforms:
+  parse_csv:
+    type: remap
+    inputs:
+      - sftp_files
+    drop_on_error: false
+    source: |
+      parts = split!(.message, "|")
+      if length(parts) < 4 {
+        return null
+      }
+      .name = parts[0]
+      .school = parts[2]
+      .major = parts[3]
+      .age = parse_int!(parts[1])
+
+  filter_valid:
+    type: filter
+    inputs:
+      - parse_csv
+    condition: exists(.name)
+
+# 输出目标：控制台 + Kafka
+sinks:
+  console_test:
+    type: console
+    inputs:
+      - parse_csv
+    encoding:
+      codec: json
+
+  kafka_output:
+    type: kafka
+    inputs:
+      - filter_valid
+    bootstrap_servers: kafka:9092
+    topic: vectum-logs
+    compression: lz4
+    encoding:
+      codec: json
+```
+
+#### 任务验证
+
+##### 1.参考测试数据发送到 SFTP 服务目录
+
+##### 2.验证 Kafka 数据
+
+```bash
+# 进入Kafka容器查看主题数据
+docker exec -it kafka kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic vectum-logs --from-beginning
+```
+
+### 4. 测试管道（Kafka → ClickHouse）
+
+#### 任务配置
+
+创建任务，添加配置如下，验证数据管道功能：
+
+```toml
 # 输入源配置
 [sources.source_kafka_msg]
 type = "kafka"
@@ -88,40 +169,50 @@ auto_offset_reset = "earliest"
 group_id = "kafka_source"
 topics = [ "vectum-logs" ]
 
+# JSON解析转换
 [transforms.parse_json]
-  inputs        = ["source_kafka_msg"]
-  type          = "remap"
-  drop_on_error = false
-  source        = '''
-      . = parse_json!(string!(.message))
-  '''
+inputs        = ["source_kafka_msg"]
+type          = "remap"
+drop_on_error = false
+source        = '''
+    . = parse_json!(string!(.message))
+'''
 
-# 定义 route区分异常数据
+# 数据路由：区分有效数据和异常数据
 [transforms.route]
 type = "route"
 inputs = ["parse_json"]
-route."non_empty_or_blank" = 'exists(.name) && .age >0' # 判断字段不为空且不为空字符串
+route."non_empty_or_blank" = 'exists(.name)'
 
-# 输出目标配置
+# 输出目标：ClickHouse
 [sinks.my_clickhouse_sink]
 type = "clickhouse"
 inputs = ["route.non_empty_or_blank"]
 endpoint = "http://clickhouse:8123"
-database = "default"
-table = "vectum_logs"
+database = "vectum"
+table = "file_data"
 auth.strategy = "basic"
 auth.user = "default"
 auth.password = "vectum123"
 skip_unknown_fields = true
 
-# 输出数据到日志
+# 输出异常数据到控制台
 [sinks.console]
 inputs = ["route._unmatched"]
 type = "console"
 encoding.codec = "json"
 ```
 
+#### 任务验证
 
+##### 1.参考测试数据发送到 SFTP 服务目录
+
+##### 2.验证 ClickHouse 数据
+
+```bash
+# 查询ClickHouse中的数据
+docker exec -it clickhouse clickhouse-client -u default --password vectum123 -q "SELECT * FROM vectum.file_data LIMIT 5;"
+```
 
 ## 服务列表
 
@@ -141,7 +232,8 @@ encoding.codec = "json"
 
 - **端口**: 11002
 - **依赖**: Kafka、ClickHouse、SFTP
-- **工作空间**: `./workspace` 挂载到容器内 `/workspace`
+- **工作空间**: `workspace-data` 挂载到容器内 `/workspace`
+- **vector缓存目录**: `vectum-data` 挂载到容器内 `/var/lib/vector`
 - **健康检查**: `curl http://localhost:11002/actuator/health`
 
 ### SFTP 服务
@@ -185,6 +277,8 @@ Kafka 集群协调服务。
 | 卷名 | 用途 | 驱动 |
 |------|------|------|
 | sftp-data | SFTP 用户数据 | local |
+| vector-data | vector缓存数据 | local |
+| workspace-data | 工作空间数据 | local |
 | zookeeper-data | ZooKeeper 数据目录 | local |
 | kafka-data | Kafka 数据目录 | local |
 | clickhouse-data | ClickHouse 数据目录 | local |
