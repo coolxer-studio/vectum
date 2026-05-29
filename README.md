@@ -8,12 +8,39 @@
 
 ## 快速运行 Vectum 服务
 
-### docker-compose 运行
+### 1. docker-compose 运行
 
 ```bash
 cd vectum/deploy
 docker-compose up -d
 ```
+### 2. 服务访问
+
+| 服务 | 地址 |
+| :--- | :--- |
+| WEB/API 服务 | `http://<ip>:11002` |
+| Swagger 文档 | `http://<ip>:11002/swagger-ui/index.html` |
+| MCP 接口 | `http://<ip>:11002/sse` |
+
+### 3. API应用示例
+参考 [API 文档](doc/api.md)
+
+### 4. web ui 应用示例
+【待补充GIF动画】
+
+### 5. MCP 应用示例
+mcp配置参数:  
+```
+{
+  "mcpServers": {
+    "vectum-http-mcp": {
+      "url": "http:/<ip>:11002/sse"
+    }
+  }
+}
+
+```
+【待补充GIF动画】
 
 ## 一、产品定位
 
@@ -145,14 +172,6 @@ docker build -t vectum:latest .
 docker run -d -p 11002:11002 vectum:latest
 ```
 
-### 4. 服务访问
-
-| 服务 | 地址 |
-| :--- | :--- |
-| API 服务 | `http://<ip>:11002` |
-| Swagger 文档 | `http://<ip>:11002/swagger-ui/index.html` |
-| MCP 接口 | `http://<ip>:11002/sse` |
-
 ---
 
 ## 六、配置说明
@@ -176,44 +195,52 @@ docker run -d -p 11002:11002 vectum:latest
 
 **TOML 格式示例：**
 ```toml
-[sources]
-nginx = { type = "file", path = "/var/log/nginx/access.log" }
+[sources.my_demo_log]
+type = "demo_logs"
+format = "apache_common"
 
-[sinks]
-elasticsearch = { type = "elasticsearch", endpoints = ["http://es:9200"], index = "logs-%Y-%m-%d" }
+[sinks.my_sink]
+type = "console"
+encoding.codec = "json"
+inputs = [ "my_demo_log" ]
 ```
 
 **YAML 格式示例：**
 ```yaml
 sources:
-  nginx:
-    type: "file"
-    path: "/var/log/nginx/access.log"
+  my_demo_log:
+    type: demo_logs
+    format: apache_common
 
 sinks:
-  elasticsearch:
-    type: "elasticsearch"
-    endpoints:
-      - "http://es:9200"
-    index: "logs-%Y-%m-%d"
+  my_sink:
+    type: console
+    encoding:
+      codec: json
+    inputs:
+      - my_demo_log
 ```
 
 **JSON 格式示例：**
 ```json
 {
-  "sources": {
-    "nginx": {
-      "type": "file",
-      "path": "/var/log/nginx/access.log"
-    }
-  },
-  "sinks": {
-    "elasticsearch": {
-      "type": "elasticsearch",
-      "endpoints": ["http://es:9200"],
-      "index": "logs-%Y-%m-%d"
-    }
-  }
+	"sources": {
+		"my_demo_log": {
+			"type": "demo_logs",
+			"format": "apache_common"
+		}
+	},
+	"sinks": {
+		"my_sink": {
+			"type": "console",
+			"encoding": {
+				"codec": "json"
+			},
+			"inputs": [
+				"my_demo_log"
+			]
+		}
+	}
 }
 ```
 
@@ -313,42 +340,10 @@ vectum/
 
 详细API接口说明参考 [API接口.md](doc/API接口.md)
 
----
-
-## 九、使用指南（WEB UI） 
-
-### 创建数据采集任务
-待更新补充截图
 
 ---
 
-## 十、MCP + AI 使用指南
-
-### 自然语言配置生成
-
-在 Web UI 输入自然语言指令：
-
-> "采集 /var/log/secure 日志，输出到 Elasticsearch，按天分索引"
-
-系统自动执行：
-1. 调用 MCP → AI 分析需求
-2. 生成合法 `vector.toml` 配置
-3. 自动创建并启动任务
-
-### MCP 接口端点
-
-```
-POST /mcp/chat
-Content-Type: application/json
-
-{
-  "message": "帮我创建一个采集 Nginx 日志的任务"
-}
-```
-
----
-
-## 十一、优势
+## 九、优势
 
 | 特性 | 说明 |
 | :--- | :--- |
@@ -361,7 +356,7 @@ Content-Type: application/json
 
 ---
 
-## 十二、适用人群
+## 十、适用人群
 
 - 运维工程师
 - DevOps 工程师
@@ -370,34 +365,20 @@ Content-Type: application/json
 
 ---
 
-## 十三、贡献指南
+## 十一、贡献指南
 
 欢迎提交 Issue 和 Pull Request！
-
-### 开发流程
-
-1. Fork 本仓库
-2. 创建特性分支：`git checkout -b feature/xxx`
-3. 提交更改：`git commit -m 'Add xxx'`
-4. 推送到分支：`git push origin feature/xxx`
-5. 创建 Pull Request
-
-### 代码规范
-
-- 遵循 Java 代码规范
-- 使用 Lombok 简化代码
-- 添加必要的注释和文档
-- 确保测试覆盖核心功能
+贡献指南参考 [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
-## 十四、许可证
+## 十二、许可证
 
 Apache 2.0 License
 
 ---
 
-## 十五、联系方式
+## 十三、联系方式
 
 如有问题或建议，欢迎通过以下方式联系：
 

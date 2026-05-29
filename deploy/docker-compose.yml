@@ -7,7 +7,20 @@ services:
     ports:
       - "11002:11002"
     volumes:
-      - ./workspace:/workspace
-    restart: unless-stopped
+      - workspace-data:/workspace
+      - vector-data:/var/lib/vector
     environment:
-      - TZ=Asia/Shanghai
+      TZ: Asia/Shanghai
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11002/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  vector-data:
+    driver: local
+  workspace-data:
+    driver: local
