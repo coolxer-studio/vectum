@@ -2,6 +2,11 @@
 
 本文档描述基于 Vectum 实现的数据管道传输案例，实现从 SFTP 获取数据 → Kafka 消息队列 → ClickHouse 数据存储的完整批量数据传输链路。
 
+> **注意：**    
+> 本案例仅用于演示和测试，不建议在生产环境中直接使用。  
+> vectur不支持sftp的source，当前案例通过共享数据卷的方式实现。  
+> 整个流程拆分成两个任务独立执行，第一个任务从SFTP读取数据写入kafka，第二个任务将kafka中的数据写入clickhouse。  
+
 ## 环境要求
 
 - Docker 20.10+
@@ -15,11 +20,11 @@ cd vectum/deploy/example
 docker-compose up -d
 ```
 
-## 快速验证
+## 快速测试
 
 ### 1. 准备测试数据
 
-创建测试数据文件并上传到 SFTP 服务，用于测试数据管道功能：
+创建测试数据文件用于上传到 SFTP 服务，测试数据管道功能：
 
 ```bash
 # 创建测试数据文件（格式：姓名|年龄|学校|专业）
@@ -35,54 +40,15 @@ sftp> cd upload
 sftp> put file.txt
 sftp> quit
 ```
-**也可以使用 upload_test_data.sh 脚本快速上传测试数据**。
+
+**也可以使用 upload\_test\_data.sh 脚本快速上传测试数据**。
 
 ```bash
 chmod +x upload_test_data.sh
 ./upload_test_data.sh
 ```
 
-### 2. 测试配置文件读取任务（SFTP → 控制台）
-
-#### 任务配置
-
-创建任务，添加配置如下，验证文件读取功能：
-
-```toml
-# -------------------------- 输入源：读取SFTP上传目录 --------------------------
-sources:
-  my_log_file:
-    type: file                 # 类型：文件读取
-    include:
-      - /sftp-upload/*         # 读取目录（支持通配符）
-    read_from: beginning       # 从文件开头读取（全量）
-    line_delimiter: "\n"       # 行分隔符
-    fingerprint:
-      strategy: device_and_inode
-
-# -------------------------- 输出目标：控制台输出 --------------------------
-sinks:
-  console_output:
-    type: console              # 输出到控制台
-    inputs: [ my_log_file ]    # 来源：处理后的日志
-    encoding:
-      codec: json              # 输出格式：json / text
-```
-
-#### 任务验证
-
-##### 1.参考测试数据发送到 SFTP 服务目录
-
-##### 2.通过接口查看控制台输出
-```bash
-curl -X GET "http://localhost:11002/vectum/api/v1/task/【任务ID】/log?log_type=console"
-```
-##### 3.通过可视化界面查看控制台输出
-访问 http://localhost:11002，查看任务日志。
-
-
-
-### 3. 测试完整数据管道任务（SFTP → Kafka）
+### 2. 任务1（SFTP → Kafka）
 
 #### 任务配置
 
@@ -154,7 +120,7 @@ sinks:
 docker exec -it kafka kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic vectum-logs --from-beginning
 ```
 
-### 4. 测试管道（Kafka → ClickHouse）
+### 3. 任务2（Kafka → ClickHouse）
 
 #### 任务配置
 
@@ -216,13 +182,13 @@ docker exec -it clickhouse clickhouse-client -u default --password vectum123 -q 
 
 ## 服务列表
 
-| 服务 | 镜像 | 端口 | 说明 |
-|------|------|------|------|
-| vectum | coolxer-studio/vectum:latest | 11002 | Vectum 主应用 |
-| sftp | coolxer-studio/atmoz-sftp:latest | 2222 | SFTP 文件传输服务 |
-| zookeeper | coolxer-studio/bitnami-zookeeper:3.8 | 2181 | ZooKeeper 协调服务 |
-| kafka | coolxer-studio/bitnami-kafka:3.2.0 | 9092 | Kafka 消息队列 |
-| clickhouse | coolxer-studio/clickhouse:22.8.16 | 8123/9000/9009 | ClickHouse 数据库 |
+| 服务         | 镜像                                   | 端口             | 说明             |
+| ---------- | ------------------------------------ | -------------- | -------------- |
+| vectum     | coolxer-studio/vectum:latest         | 11002          | Vectum 主应用     |
+| sftp       | coolxer-studio/atmoz-sftp:latest     | 2222           | SFTP 文件传输服务    |
+| zookeeper  | coolxer-studio/bitnami-zookeeper:3.8 | 2181           | ZooKeeper 协调服务 |
+| kafka      | coolxer-studio/bitnami-kafka:3.2.0   | 9092           | Kafka 消息队列     |
+| clickhouse | coolxer-studio/clickhouse:22.8.16    | 8123/9000/9009 | ClickHouse 数据库 |
 
 ## 服务详情
 
@@ -274,15 +240,15 @@ Kafka 集群协调服务。
 
 ## 数据持久化
 
-| 卷名 | 用途 | 驱动 |
-|------|------|------|
-| sftp-data | SFTP 用户数据 | local |
-| vector-data | vector缓存数据 | local |
-| workspace-data | 工作空间数据 | local |
-| zookeeper-data | ZooKeeper 数据目录 | local |
-| kafka-data | Kafka 数据目录 | local |
+| 卷名              | 用途              | 驱动    |
+| --------------- | --------------- | ----- |
+| sftp-data       | SFTP 用户数据       | local |
+| vector-data     | vector缓存数据      | local |
+| workspace-data  | 工作空间数据          | local |
+| zookeeper-data  | ZooKeeper 数据目录  | local |
+| kafka-data      | Kafka 数据目录      | local |
 | clickhouse-data | ClickHouse 数据目录 | local |
-| clickhouse-logs | ClickHouse 日志 | local |
+| clickhouse-logs | ClickHouse 日志   | local |
 
 ## 网络配置
 
@@ -291,28 +257,28 @@ Kafka 集群协调服务。
 
 ## 环境变量
 
-| 服务 | 变量 | 值 |
-|------|------|-----|
-| 全局 | TZ | Asia/Shanghai |
-| SFTP | SFTP_USERS | vectum:vectum123:1001 |
-| ClickHouse | CLICKHOUSE_DB | default |
-| ClickHouse | CLICKHOUSE_USER | default |
-| ClickHouse | CLICKHOUSE_PASSWORD | vectum123 |
-| Kafka | KAFKA_BROKER_ID | 1 |
-| Kafka | KAFKA_CFG_LISTENERS | PLAINTEXT://:9092 |
-| Kafka | KAFKA_CFG_ADVERTISED_LISTENERS | PLAINTEXT://kafka:9092 |
-| Kafka | KAFKA_CFG_ZOOKEEPER_CONNECT | zookeeper:2181 |
+| 服务         | 变量                                | 值                      |
+| ---------- | --------------------------------- | ---------------------- |
+| 全局         | TZ                                | Asia/Shanghai          |
+| SFTP       | SFTP\_USERS                       | vectum:vectum123:1001  |
+| ClickHouse | CLICKHOUSE\_DB                    | default                |
+| ClickHouse | CLICKHOUSE\_USER                  | default                |
+| ClickHouse | CLICKHOUSE\_PASSWORD              | vectum123              |
+| Kafka      | KAFKA\_BROKER\_ID                 | 1                      |
+| Kafka      | KAFKA\_CFG\_LISTENERS             | PLAINTEXT://:9092      |
+| Kafka      | KAFKA\_CFG\_ADVERTISED\_LISTENERS | PLAINTEXT://kafka:9092 |
+| Kafka      | KAFKA\_CFG\_ZOOKEEPER\_CONNECT    | zookeeper:2181         |
 
 ## 访问地址
 
-| 服务 | 地址 |
-|------|------|
-| Vectum Web UI | http://localhost:11002 |
-| Vectum API | http://localhost:11002/vectum/api/v1 |
-| Swagger 文档 | http://localhost:11002/swagger-ui/index.html |
-| SFTP | sftp://localhost:2222 |
-| ClickHouse HTTP | http://localhost:8123 |
-| Kafka | localhost:9092 |
+| 服务              | 地址                                             |
+| --------------- | ---------------------------------------------- |
+| Vectum Web UI   | <http://localhost:11002>                       |
+| Vectum API      | <http://localhost:11002/vectum/api/v1>         |
+| Swagger 文档      | <http://localhost:11002/swagger-ui/index.html> |
+| SFTP            | sftp\://localhost:2222                         |
+| ClickHouse HTTP | <http://localhost:8123>                        |
+| Kafka           | localhost:9092                                 |
 
 ## 停止服务
 
@@ -332,3 +298,4 @@ docker-compose down -v
 
 - `depends_on` + `condition: service_healthy` 确保依赖服务健康
 - 启动间隔 `start_period: 60s` 给予足够初始化时间
+

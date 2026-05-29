@@ -19,7 +19,8 @@
   "name": "任务名称",          // String - 任务名（必填）
   "description": "任务描述",   // String - 描述信息（可选）
   "config": "{}",             // String - 配置内容（必填，支持YAML/TOML/JSON格式）
-  "source": "system"          // String - 来源（可选，如：manual/system/api）
+  "source": "SYSTEM",         // String - 来源（可选，枚举值：SYSTEM/MCP/API/WEB）
+  "updateTime": "2024-01-01 12:00:00"  // String - 更新时间（内部字段）
 }
 ```
 
@@ -30,7 +31,8 @@
 | name | String | 是 | 任务名称，不能为空 |
 | description | String | 否 | 任务描述 |
 | config | String | 是 | Vector配置内容，支持YAML/TOML/JSON格式 |
-| source | String | 否 | 任务来源标识 |
+| source | String | 否 | 任务来源标识（枚举值：SYSTEM/MCP/API/WEB） |
+| updateTime | Date | 否 | 更新时间（内部字段） |
 
 ### 2. TaskVo (任务视图对象)
 
@@ -39,8 +41,8 @@
   "id": 1,                         // Long - 任务ID
   "name": "任务名称",               // String - 任务名
   "description": "任务描述",        // String - 描述信息
+  "source": "SYSTEM",               // String - 来源（枚举值：SYSTEM/MCP/API/WEB）
   "config": "{}",                  // String - 配置内容
-  "source": "system",              // String - 来源
   "status": "created",             // String - 状态(created/running/running[error]/error/stopped)
   "pid": 12345,                    // Integer - 进程ID（运行时为实际PID，停止时为0）
   "createTime": "2024-01-01 12:00:00",  // String - 创建时间
@@ -71,9 +73,14 @@
 | 响应码 | 说明 |
 |-------|------|
 | 0 | 请求成功 |
-| 404 | 任务不存在 |
-| 500 | 服务器内部错误/任务操作失败 |
-| 其他 | 业务错误码 |
+| -1 | 未知错误 |
+| 101 | 请求失败 |
+| 102 | 任务名称不能为空 |
+| 103 | 任务配置不能为空 |
+| 104 | 任务不存在 |
+| 105 | 任务操作失败 |
+
+> **注意**: 校验失败（如名称为空）时，返回对应的业务错误码（102/103）
 
 ---
 
@@ -110,10 +117,9 @@
 curl -X POST http://localhost:11002/vectum/api/v1/task/add \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "nginx-log-collector",
-    "description": "采集 Nginx 访问日志",
-    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  console = { type = \"console\" }",
-    "source": "manual"
+    "name": "测试任务",
+    "description": "输出测试日志到控制台",
+    "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}"
   }'
 ```
 
@@ -124,10 +130,9 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/add \
   "msg": "success",
   "data": {
     "id": 1,
-    "name": "nginx-log-collector",
-    "description": "采集 Nginx 访问日志",
-    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  console = { type = \"console\" }",
-    "source": "manual",
+    "name": "测试任务",
+    "description": "输出测试日志到控制台",
+    "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}",
     "status": "created",
     "pid": 0,
     "createTime": "2024-01-01 12:00:00",
@@ -175,7 +180,7 @@ curl -X DELETE http://localhost:11002/vectum/api/v1/task/123
 **失败响应**(任务不存在):
 ```json
 {
-  "status": 404,
+  "status": 104,
   "msg": "任务不存在",
   "data": null
 }
@@ -192,11 +197,11 @@ curl -X DELETE http://localhost:11002/vectum/api/v1/task/123
 **查询参数**:
 | 参数名 | 类型 | 必填 | 说明 |
 |-------|------|-----|------|
-| ids | List\<Long\> | 是 | 任务ID列表(逗号分隔) |
+| ids | List\<Long\> | 是 | 任务ID列表(重复参数格式，如 ids=1&ids=2&ids=3) |
 
 **请求示例**:
 ```bash
-curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3,4,5"
+curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1&ids=2&ids=3&ids=4&ids=5"
 ```
 
 **成功响应**:
@@ -241,7 +246,7 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
   -d '{
     "name": "更新后的任务名称",
     "description": "更新后的描述",
-    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }\n\n[sinks]\n  elasticsearch = { type = \"elasticsearch\", endpoints = [\"http://es:9200\"] }"
+    "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}"
   }'
 ```
 
@@ -274,7 +279,7 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
 **查询参数**:
 | 参数名 | 类型 | 必填 | 说明 |
 |-------|------|-----|------|
-| ids | List\<Long\> | 是 | 任务ID列表(逗号分隔) |
+| ids | List\<Long\> | 是 | 任务ID列表(重复参数格式，如 ids=1&ids=2&ids=3) |
 
 **请求参数**:
 - Content-Type: `application/json`
@@ -282,7 +287,7 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
 
 **请求示例**:
 ```bash
-curl -X PUT "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3" \
+curl -X PUT "http://localhost:11002/vectum/api/v1/task/batch?ids=1&ids=2&ids=3" \
   -H "Content-Type: application/json" \
   -d '{
     "description": "批量更新的描述信息"
@@ -323,10 +328,9 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/all
   "data": [
     {
       "id": 1,
-      "name": "nginx-log-collector",
-      "description": "采集 Nginx 访问日志",
-      "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }",
-      "source": "manual",
+      "name": "测试任务",
+      "description": "输出测试日志到控制台",
+      "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}",
       "status": "running",
       "pid": 12345,
       "createTime": "2024-01-01 12:00:00",
@@ -336,8 +340,8 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/all
       "id": 2,
       "name": "syslog-collector",
       "description": "采集系统日志",
-      "config": "[sources]\n  syslog = { type = \"syslog\" }",
-      "source": "system",
+      "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}",
+      "source": "SYSTEM",
       "status": "stopped",
       "pid": 0,
       "createTime": "2024-01-02 10:00:00",
@@ -362,7 +366,7 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/all
 
 **请求示例**:
 ```bash
-curl -X GET http://localhost:11002/vectum/api/v1/task/123/view
+curl -X GET http://localhost:11002/vectum/api/v1/task/<task_id>/view
 ```
 
 **成功响应**:
@@ -372,10 +376,9 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/123/view
   "msg": "success",
   "data": {
     "id": 123,
-    "name": "nginx-log-collector",
-    "description": "采集 Nginx 访问日志",
-    "config": "[sources]\n  nginx = { type = \"file\", path = \"/var/log/nginx/access.log\" }",
-    "source": "manual",
+    "name": "测试任务",
+    "description": "输出测试日志到控制台",
+    "config": "{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}",
     "status": "running",
     "pid": 12345,
     "createTime": "2024-01-01 12:00:00",
@@ -410,7 +413,7 @@ curl -X GET http://localhost:11002/vectum/api/v1/task/123/view
 
 **请求示例**:
 ```bash
-curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
+curl -X POST http://localhost:11002/vectum/api/v1/task/<task_id>/toggle
 ```
 
 **成功响应**:
@@ -425,7 +428,7 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
 **失败响应**(操作失败):
 ```json
 {
-  "status": 500,
+  "status": 105,
   "msg": "任务操作失败",
   "data": null
 }
@@ -451,7 +454,7 @@ curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
 
 **请求示例**:
 ```bash
-curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
+curl -X GET "http://localhost:11002/vectum/api/v1/task/<task_id>/log?log_type=console"
 ```
 
 **成功响应**:
@@ -468,8 +471,8 @@ curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
 **失败响应**(获取日志失败):
 ```json
 {
-  "status": 500,
-  "msg": "内部错误",
+  "status": 101,
+  "msg": "请求失败",
   "data": null
 }
 ```
@@ -516,8 +519,8 @@ curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
 axios.post('/vectum/api/v1/task/add', {
   name: '测试任务',
   description: '这是一个测试任务',
-  config: '[sources]\n  test = { type = "file", path = "/var/log/test.log" }',
-  source: 'test'
+  config: '{"sources":{"my_demo_log":{"type":"demo_logs","format":"apache_common"}},"sinks":{"my_sink":{"type":"console","encoding":{"codec":"json"},"inputs":["my_demo_log"]}}}',
+  source: 'API'
 })
 
 // 获取所有任务
@@ -530,10 +533,10 @@ axios.put('/vectum/api/v1/task/123', {
 })
 
 // 启动/停止任务
-axios.post('/vectum/api/v1/task/123/toggle')
+axios.post('/vectum/api/v1/task/<task_id>/toggle')
 
 // 获取日志
-axios.get('/vectum/api/v1/task/123/log', {
+axios.get('/vectum/api/v1/task/<task_id>/log', {
   params: {
     log_type: 'console'
   }
@@ -542,7 +545,7 @@ axios.get('/vectum/api/v1/task/123/log', {
 // 批量删除任务
 axios.delete('/vectum/api/v1/task/batch', {
   params: {
-    ids: '1,2,3'
+    ids: [1, 2, 3]
   }
 })
 ```
@@ -553,7 +556,7 @@ axios.delete('/vectum/api/v1/task/batch', {
 # 创建任务
 curl -X POST http://localhost:11002/vectum/api/v1/task/add \
   -H "Content-Type: application/json" \
-  -d '{"name":"测试任务","description":"测试","config":"[sources]\n  test = { type = \"file\", path = \"/var/log/test.log\" }","source":"test"}'
+  -d '{"name":"测试任务","description":"测试","config":"{\"sources\":{\"my_demo_log\":{\"type\":\"demo_logs\",\"format\":\"apache_common\"}},\"sinks\":{\"my_sink\":{\"type\":\"console\",\"encoding\":{\"codec\":\"json\"},\"inputs\":[\"my_demo_log\"]}}}","source":"API"}'
 
 # 获取所有任务
 curl -X GET http://localhost:11002/vectum/api/v1/task/all
@@ -564,13 +567,13 @@ curl -X PUT http://localhost:11002/vectum/api/v1/task/123 \
   -d '{"name":"更新任务"}'
 
 # 启动/停止任务
-curl -X POST http://localhost:11002/vectum/api/v1/task/123/toggle
+curl -X POST http://localhost:11002/vectum/api/v1/task/<task_id>/toggle
 
 # 获取日志
-curl -X GET "http://localhost:11002/vectum/api/v1/task/123/log?log_type=console"
+curl -X GET "http://localhost:11002/vectum/api/v1/task/<task_id>/log?log_type=console"
 
 # 批量删除任务
-curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1,2,3"
+curl -X DELETE "http://localhost:11002/vectum/api/v1/task/batch?ids=1&ids=2&ids=3"
 ```
 
 ---
