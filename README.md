@@ -26,7 +26,7 @@ docker-compose up -d
 参考 [API 文档](doc/api.md)
 
 ### 4. web ui 应用示例
-【待补充GIF动画】
+![web ui 应用示例](doc/show-web.gif)
 
 ### 5. MCP 应用示例
 mcp配置参数:  
@@ -40,7 +40,7 @@ mcp配置参数:
 }
 
 ```
-【待补充GIF动画】
+![mcp 应用示例](doc/show-mcp.gif)
 
 ## 一、产品定位
 
