@@ -20,6 +20,7 @@
   "description": "任务描述",   // String - 描述信息（可选）
   "config": "{}",             // String - 配置内容（必填，支持YAML/TOML/JSON格式）
   "source": "SYSTEM",         // String - 来源（可选，枚举值：SYSTEM/MCP/API/WEB）
+  "mark": "备注信息",          // String - 备注（可选）
   "updateTime": "2024-01-01 12:00:00"  // String - 更新时间（内部字段）
 }
 ```
@@ -32,6 +33,7 @@
 | description | String | 否 | 任务描述 |
 | config | String | 是 | Vector配置内容，支持YAML/TOML/JSON格式 |
 | source | String | 否 | 任务来源标识（枚举值：SYSTEM/MCP/API/WEB） |
+| mark | String | 否 | 备注信息 |
 | updateTime | Date | 否 | 更新时间（内部字段） |
 
 ### 2. TaskVo (任务视图对象)
@@ -42,7 +44,7 @@
   "name": "任务名称",               // String - 任务名
   "description": "任务描述",        // String - 描述信息
   "source": "SYSTEM",               // String - 来源（枚举值：SYSTEM/MCP/API/WEB）
-  "config": "{}",                  // String - 配置内容
+  "mark": "备注信息",               // String - 备注
   "status": "created",             // String - 状态(created/running/running[error]/error/stopped)
   "pid": 12345,                    // Integer - 进程ID（运行时为实际PID，停止时为0）
   "createTime": "2024-01-01 12:00:00",  // String - 创建时间
