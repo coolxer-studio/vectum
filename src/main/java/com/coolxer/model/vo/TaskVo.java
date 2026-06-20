@@ -42,6 +42,11 @@ public class TaskVo implements Serializable {
     private String source;
 
     /**
+     * 备注
+     */
+    private String mark;
+
+    /**
      * 配置
      */
     private String config;
@@ -87,6 +92,7 @@ public class TaskVo implements Serializable {
         this.name = task.getName();
         this.description = task.getDescription();
         this.source = task.getSource().name();
+        this.mark = task.getMark();
         this.config = task.getConfig();
         this.status = status;
         this.pid = task.getPid();

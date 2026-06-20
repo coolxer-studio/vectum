@@ -45,8 +45,19 @@ public class Task {
      */
     private TaskSourceEnum source = TaskSourceEnum.SYSTEM;
 
+    /**
+     * 备注
+     */
+    private String mark;
+
+    /**
+     * 创建时间
+     */
     private Date createTime;
 
+    /**
+     * 更新时间
+     */
     private Date updateTime;
 
     /**
@@ -62,6 +73,7 @@ public class Task {
         }else{
             this.source = TaskSourceEnum.fromString(taskDto.getSource());
         }
+        this.mark = taskDto.getMark();
         this.updateTime = java.sql.Timestamp.valueOf(LocalDateTime.now());
         if(createTime == null){
             createTime =  this.updateTime;

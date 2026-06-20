@@ -42,5 +42,13 @@ public class TaskDto {
      */
     private String source;
 
+    /**
+     * 备注
+     */
+    private String mark;
+
+    /**
+     * 更新时间
+     */
     private Date updateTime;
 }
