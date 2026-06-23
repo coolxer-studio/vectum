@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   vectum:
-    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest-amd64
     container_name: vectum
     ports:
       - "11002:11002"
@@ -30,7 +30,7 @@ services:
       start_period: 60s
 
   sftp:
-    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/atmoz-sftp:latest
+    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/atmoz-sftp:latest-amd64
     container_name: sftp
     ports:
       - "2222:22"
@@ -50,60 +50,8 @@ services:
       retries: 3
       start_period: 10s
 
-  zookeeper:
-    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/bitnami-zookeeper:3.8
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    environment:
-      TZ: Asia/Shanghai
-      ALLOW_ANONYMOUS_LOGIN: "yes"
-      ZOO_SERVER_ID: 1
-      ZOO_PORT_NUMBER: 2181
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - zookeeper-data:/bitnami/zookeeper/data
-    restart: unless-stopped
-    networks:
-      - vectum-network
-    healthcheck:
-      test: ["CMD", "zkServer.sh", "status"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  kafka:
-    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/bitnami-kafka:3.2.0
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      TZ: Asia/Shanghai
-      KAFKA_BROKER_ID: 1
-      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CFG_ZOOKEEPER_CONNECT: zookeeper:2181
-      ALLOW_PLAINTEXT_LISTENER: "yes"
-      KAFKA_CFG_MESSAGE_MAX_BYTES: 1048576
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - kafka-data:/bitnami/kafka/data
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - vectum-network
-    healthcheck:
-      test: ["CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "localhost:9092"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   clickhouse:
-    image: crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/clickhouse:22.8.16
+    image: clickhouse/clickhouse-server:25.9
     container_name: clickhouse
     environment:
       TZ: Asia/Shanghai
@@ -116,9 +64,10 @@ services:
       - "9009:9009"
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - clickhouse-logs:/var/log/clickhouse-server
-      - clickhouse-data:/var/lib/clickhouse
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./config/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ./config/clickhouse/users.xml:/etc/clickhouse-server/users.xml
+      - ./data/clickhouse/logs:/var/log/clickhouse-server
+      - ./data/clickhouse/data:/var/lib/clickhouse
     restart: unless-stopped
     networks:
       - vectum-network
@@ -129,14 +78,43 @@ services:
       retries: 3
       start_period: 30s
 
+  kafka:
+    image: apache/kafka:4.2.0
+    container_name: kafka
+    environment:
+      TZ: Asia/Shanghai
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-service:9092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-service:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTORS: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    ports:
+      - "9094:9094"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - kafka-data:/tmp/kafka-logs
+    restart: always
+    networks:
+      - vectum-network
+    healthcheck:
+      test: [ "CMD", "kafka-topics.sh", "--list", "--bootstrap-server", "localhost:9092" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
 networks:
   vectum-network:
     driver: bridge
 
 volumes:
   sftp-data:
-    driver: local
-  zookeeper-data:
     driver: local
   kafka-data:
     driver: local
