@@ -1,4 +1,4 @@
-ARG BASE_IMAGE_ARCH=amd64
+ARG BASE_IMAGE_ARCH=none
 FROM crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/eclipse-temurin:17-jdk-${BASE_IMAGE_ARCH}
 
 WORKDIR /app
