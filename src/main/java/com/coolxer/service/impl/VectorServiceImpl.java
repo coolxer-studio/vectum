@@ -247,6 +247,7 @@ public class VectorServiceImpl implements VectorService {
         ProcessBuilder processBuilder = new ProcessBuilder(cmdPath, "-c", configPath);
         
         try {
+            initLogFiles(path);
             Process process = processBuilder.start();
             PROCESS_CACHE.put(path, process);
             
@@ -262,6 +263,20 @@ public class VectorServiceImpl implements VectorService {
             log.error("Failed to start process for path: {}", path, e);
         }
         return 0;
+    }
+
+    private void initLogFiles(String path) throws IOException {
+        Path infoLogPath = Path.of(String.format(LOG_INFO_FORMAT, taskWorkspace, path));
+        Path errorLogPath = Path.of(String.format(LOG_ERROR_FORMAT, taskWorkspace, path));
+        Files.createDirectories(infoLogPath.getParent());
+        createLogFileIfAbsent(infoLogPath);
+        createLogFileIfAbsent(errorLogPath);
+    }
+
+    private void createLogFileIfAbsent(Path logPath) throws IOException {
+        if (!Files.exists(logPath)) {
+            Files.writeString(logPath, "create.......\n", StandardOpenOption.CREATE_NEW);
+        }
     }
     
     private String findConfigFile(String path) {
@@ -331,8 +346,11 @@ public class VectorServiceImpl implements VectorService {
                 process.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
             }
             
-            File pidFile = new File(String.format(PID_FORMAT, taskWorkspace, path));
-            if(!process.isAlive() && pidFile.delete()){
+            if (!process.isAlive()) {
+                File pidFile = new File(String.format(PID_FORMAT, taskWorkspace, path));
+                if (pidFile.exists() && !pidFile.delete()) {
+                    log.warn("Failed to delete pid file: {}", pidFile.getAbsolutePath());
+                }
                 PROCESS_CACHE.remove(path);
                 return true;
             }
@@ -372,9 +390,14 @@ public class VectorServiceImpl implements VectorService {
         if (filePath == null) {
             return null;
         }
+
+        File file = new File(filePath);
+        if (!file.exists()) {
+            return "日志文件尚未创建，请稍后重试。\n";
+        }
         
         StringBuilder stringBuilder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 stringBuilder.append(line).append("\n");
