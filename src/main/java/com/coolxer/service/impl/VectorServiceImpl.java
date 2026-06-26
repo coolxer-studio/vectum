@@ -127,34 +127,78 @@ public class VectorServiceImpl implements VectorService {
         }
         return null;
     }
-    
+
     private String detectFormat(String content) {
         if (content == null || content.isEmpty()) {
             return "yaml";
         }
-        
+
         String trimmed = content.trim();
-        
+
         if (trimmed.startsWith("{")) {
             return "json";
         }
-        
+
         if (trimmed.startsWith("---")) {
             return "yaml";
         }
-        
+
         int colonCount = countOccurrences(trimmed, ':');
         int equalsCount = countOccurrences(trimmed, '=');
         int bracketCount = countOccurrences(trimmed, '[');
-        
-        if (equalsCount > colonCount) {
+        int arrayStartCount = countOccurrences(trimmed, '[');
+
+        // 检查 TOML 特征
+        boolean hasTOMLAssignment = false;
+        boolean hasArrayBracket = false;
+
+        String[] lines = trimmed.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty() || line.startsWith("#")) {
+                continue;
+            }
+
+            // 检查行内是否包含 TOML 赋值（key = "value"）
+            int equalsIndex = line.indexOf('=');
+            if (equalsIndex > 0) {
+                // 检查等号前面是否是有效的键名（没有包含 : 或 { 等符号）
+                String keyPart = line.substring(0, equalsIndex).trim();
+                if (!keyPart.contains(":") && !keyPart.contains("{") && !keyPart.contains("[")) {
+                    hasTOMLAssignment = true;
+                }
+            }
+
+            // 检查数组开始标记
+            if (line.endsWith(" = [") || line.contains(" = [")) {
+                hasArrayBracket = true;
+            }
+        }
+
+        // TOML 特征判断：有赋值语句且包含数组标记
+        if (hasTOMLAssignment && hasArrayBracket) {
             return "toml";
         }
-        
+
+        // 检查 TOML section 标记
+        if (trimmed.contains("[") && trimmed.contains("]")) {
+            // 统计独立的 section 标记（不包含在 JSON 字符串中的）
+            int sectionCount = 0;
+            for (String line : lines) {
+                line = line.trim();
+                if (line.matches("^\\[.*\\]$")) {
+                    sectionCount++;
+                }
+            }
+            if (sectionCount > 0 && hasTOMLAssignment) {
+                return "toml";
+            }
+        }
+
         if (colonCount > equalsCount && colonCount > bracketCount) {
             return "yaml";
         }
-        
+
         return "yaml";
     }
     

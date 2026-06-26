@@ -117,7 +117,7 @@ sinks:
 
 ```bash
 # 进入Kafka容器查看主题数据
-docker exec -it kafka kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic vectum-logs --from-beginning
+docker exec -it kafka /opt/kafka/bin/kafka-console-consumer.sh --bootstrap-server kafka:9092 --topic vectum-logs --from-beginning
 ```
 
 ### 3. 任务2（Kafka → ClickHouse）

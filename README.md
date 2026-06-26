@@ -165,12 +165,33 @@ java -jar target/application.jar --spring.config.location=src/main/resources/app
 #### Docker 构建 启动
 
 ```bash
-# 构建镜像
-docker build -t vectum:latest .
+# 使用构建脚本构建（默认不推送镜像）
+./build.sh
+
+# 构建并推送镜像到 Docker Registry
+PUSH_IMAGE=true ./build.sh
 
 # 运行容器
-docker run -d -p 11002:11002 vectum:latest
+docker run -d -p 11002:11002 crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest-{arch}
 ```
+
+**构建参数说明：**
+
+| 参数 | 默认值 | 说明 |
+| :--- | :--- | :--- |
+| `PUSH_IMAGE` | `false` | 是否推送镜像到 Docker Registry |
+
+**镜像标签说明：**
+
+| 标签格式 | 示例 | 说明 |
+| :--- | :--- | :--- |
+| `latest-{arch}` | `latest-amd64`, `latest-arm64` | 最新版本标签 |
+| `{YYYYMMDD}-{arch}` | `20240115-amd64` | 日期版本标签 |
+
+**支持架构：**
+
+- `amd64`（x86_64）
+- `arm64`（aarch64）
 
 ---
 
