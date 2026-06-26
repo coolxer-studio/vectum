@@ -32,7 +32,7 @@ public class MonitorServiceImpl implements MonitorService {
      * @param path 子路径
      * @param inputStream 输入流
      */
-    @Async
+    @Async("logMonitorExecutor")
     @Override
     public void monitorLog(String format, String rootPath, String path, InputStream inputStream) {
         Path logPath = Path.of(String.format(format, rootPath, path));
