@@ -11,6 +11,7 @@ services:
       - vector-data:/var/lib/vector
     environment:
       TZ: Asia/Shanghai
+      VECTUM_AUTH_TOKEN: sk-vectum-token
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:11002/actuator/health"]

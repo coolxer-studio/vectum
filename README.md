@@ -12,6 +12,7 @@
 
 ```bash
 cd vectum/deploy
+export VECTUM_AUTH_TOKEN='change-me'
 docker-compose up -d
 ```
 ### 2. 服务访问
@@ -34,7 +35,10 @@ mcp配置参数:
 {
   "mcpServers": {
     "vectum-http-mcp": {
-      "url": "http:/<ip>:11002/sse"
+      "url": "http://<ip>:11002/sse",
+      "headers": {
+        "Authorization": "Bearer <VECTUM_AUTH_TOKEN>"
+      }
     }
   }
 }
@@ -159,7 +163,7 @@ mvn spring-boot:run
 mvn clean package
 
 # 运行打包后的 Jar
-java -jar target/application.jar --spring.config.location=src/main/resources/application.properties
+VECTUM_AUTH_TOKEN='change-me' java -jar target/application.jar --spring.config.location=src/main/resources/application.properties
 ```
 
 #### Docker 构建 启动
@@ -172,7 +176,7 @@ java -jar target/application.jar --spring.config.location=src/main/resources/app
 PUSH_IMAGE=true ./build.sh
 
 # 运行容器
-docker run -d -p 11002:11002 crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest-{arch}
+docker run -d -p 11002:11002 -e VECTUM_AUTH_TOKEN='change-me' crpi-4pdi7kz96g4v0tg3.cn-beijing.personal.cr.aliyuncs.com/coolxer-studio/vectum:latest-{arch}
 ```
 
 **构建参数说明：**
