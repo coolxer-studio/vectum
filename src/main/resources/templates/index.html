@@ -36,6 +36,68 @@
 <script type="text/javascript">
 (function () {
 	let amis = amisRequire('amis/embed');
+	let authTokenStorageKey = 'vectum.auth.token';
+	let memoryAuthToken = '';
+	let authPromptVisible = false;
+
+	function getAuthToken() {
+		try {
+			return window.localStorage.getItem(authTokenStorageKey) || memoryAuthToken || '';
+		} catch (e) {
+			return memoryAuthToken || '';
+		}
+	}
+
+	function setAuthToken(token) {
+		memoryAuthToken = token || '';
+		try {
+			if (token) {
+				window.localStorage.setItem(authTokenStorageKey, token);
+			} else {
+				window.localStorage.removeItem(authTokenStorageKey);
+			}
+		} catch (e) {
+			// localStorage 不可用时使用内存 token。
+		}
+	}
+
+	function promptAuthToken() {
+		if (authPromptVisible) {
+			return getAuthToken();
+		}
+		authPromptVisible = true;
+		let token = window.prompt('请输入 Vectum 访问 Token');
+		authPromptVisible = false;
+		if (token) {
+			setAuthToken(token.trim());
+		}
+		return getAuthToken();
+	}
+
+	function ensureAuthToken() {
+		if (!getAuthToken()) {
+			promptAuthToken();
+		}
+	}
+
+	function appendAuthHeader(config) {
+		let token = getAuthToken();
+		config.headers = config.headers || {};
+		if (token) {
+			config.headers.Authorization = 'Bearer ' + token;
+		}
+		return config;
+	}
+
+	function handleUnauthorizedResponse() {
+		setAuthToken('');
+		let token = promptAuthToken();
+		if (token) {
+			window.location.reload();
+		}
+	}
+
+	ensureAuthToken();
 	// 通过替换下面这个配置来生成不同页面
 	let amisJSON = {
 	"type": "page",
@@ -292,7 +354,17 @@
 		]
 	}]
 };
-	let amisScoped = amis.embed('#root', amisJSON);
+	let amisScoped = amis.embed('#root', amisJSON, {}, {
+		requestAdaptor: function (config) {
+			return appendAuthHeader(config);
+		},
+		responseAdaptor: function (api, payload, query, request, response) {
+			if (response && response.status === 401) {
+				handleUnauthorizedResponse();
+			}
+			return payload;
+		}
+	});
 })();
 
 

@@ -13,6 +13,7 @@ services:
       TZ: Asia/Shanghai
       SPRING_PROFILES_ACTIVE: prod
       JAVA_OPTS: -Xms512m -Xmx1024m -XX:+UseG1GC
+      VECTUM_AUTH_TOKEN: sk-vectum-token
     restart: unless-stopped
     networks:
       - vectum-network
