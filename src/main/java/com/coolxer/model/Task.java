@@ -73,7 +73,10 @@ public class Task {
         }else{
             this.source = TaskSourceEnum.fromString(taskDto.getSource());
         }
-        this.mark = taskDto.getMark();
+        // 更新请求未传备注时保留原值，传空字符串时允许显式清空。
+        if (taskDto.getMark() != null) {
+            this.mark = taskDto.getMark();
+        }
         this.updateTime = java.sql.Timestamp.valueOf(LocalDateTime.now());
         if(createTime == null){
             createTime =  this.updateTime;
